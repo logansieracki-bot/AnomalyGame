@@ -11,6 +11,7 @@ Debug URL params: `?night=3` skips the menu, `?speed=5` runs the clock faster. `
 - Click the map or press `1`-`9`: switch camera
 - `R` / Report button: choose what is wrong in the current room (delay, then cooldown)
 - `Space`: lower/raise the monitor
+- `Q` / `E` (monitor lowered, hold): flashlight on the door / vent. Without it you cannot see what is there
 - `A` / `D` (monitor lowered): close door / seal vent. Keeping either shut builds strain and it jams open for 10s
 
 ## What's in

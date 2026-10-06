@@ -100,15 +100,29 @@
   $('reportBtn').onclick = Game.toggleReportMenu;
   $('doorBtn').onclick = () => Game.toggleBlock('door');
   $('ventBtn').onclick = () => Game.toggleBlock('vent');
+  // flashlights are hold-to-use
+  for (const k of ['door', 'vent']) {
+    const b = $(k + 'Light');
+    b.onpointerdown = e => { e.preventDefault(); Game.setFlash(k, true); };
+    for (const ev of ['onpointerup', 'onpointerleave', 'onpointercancel']) b[ev] = () => Game.setFlash(k, false);
+  }
   addEventListener('keydown', e => {
     if (e.repeat) return;
     const k = e.key.toLowerCase();
     if (k === ' ') { e.preventDefault(); Game.toggleMonitor(); }
     else if (k === 'a') Game.toggleBlock('door');
     else if (k === 'd') Game.toggleBlock('vent');
+    else if (k === 'q') Game.setFlash('door', true);
+    else if (k === 'e') Game.setFlash('vent', true);
     else if (k === 'r') Game.toggleReportMenu();
     else if (k >= '1' && k <= '9' && G.monitor && ROOMS[+k - 1]) Game.switchCam(ROOMS[+k - 1].id);
   });
+
+  addEventListener('keyup', e => {
+    const k = e.key.toLowerCase();
+    if (k === 'q') Game.setFlash('door', false); else if (k === 'e') Game.setFlash('vent', false);
+  });
+  addEventListener('blur', () => { Game.setFlash('door', false); Game.setFlash('vent', false); });
 
   // ---- one-shot events -> sound ----
   function handleEvents() {
@@ -148,6 +162,8 @@
       $(k + 'Strain').style.background = G.strain[k] > 70 ? '#e55' : '#cf8f4f';
       $(k + 'Note').textContent = G.jam[k] > 0 ? `JAMMED ${Math.ceil(G.jam[k])}s` : (G.strain[k] > 70 ? 'STRAINING' : '');
       $(k + 'Btn').disabled = G.jam[k] > 0;
+      $(k + 'Light').disabled = G[k];
+      $(k + 'Light').classList.toggle('active', G.flash[k]);
     }
     $('doorBtn').textContent = G.door ? 'DOOR: CLOSED [A]' : 'DOOR: OPEN [A]';
     $('ventBtn').textContent = G.vent ? 'VENT: SEALED [D]' : 'VENT: OPEN [D]';
@@ -172,7 +188,7 @@
   function render(now) {
     ctx.clearRect(0, 0, W, H);
     if (!G.monitor) {
-      Scene.drawOffice(ctx, { door: G.door, vent: G.vent, atEntry: Game.entitiesAtEntry });
+      Scene.drawOffice(ctx, { door: G.door, vent: G.vent, flash: G.flash, fakes: G.entryFake, atEntry: Game.entitiesAtEntry });
       post(0.1, 'rgb(140,170,160)');
     } else {
       Scene.drawRoom(ctx, G.cam, G.anomalies);

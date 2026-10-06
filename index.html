@@ -28,8 +28,8 @@
 
     <button id="monitorBtn">LOWER MONITOR [SPACE]</button>
     <div id="defense" class="hidden">
-      <div class="def"><button id="doorBtn">DOOR [A]</button><div class="strain"><i id="doorStrain"></i></div><small id="doorNote"></small></div>
-      <div class="def"><button id="ventBtn">VENT [D]</button><div class="strain"><i id="ventStrain"></i></div><small id="ventNote"></small></div>
+      <div class="def"><button id="doorBtn">DOOR [A]</button><div class="strain"><i id="doorStrain"></i></div><small id="doorNote"></small><button class="light" id="doorLight">FLASHLIGHT [Q]</button></div>
+      <div class="def"><button id="ventBtn">VENT [D]</button><div class="strain"><i id="ventStrain"></i></div><small id="ventNote"></small><button class="light" id="ventLight">FLASHLIGHT [E]</button></div>
     </div>
     <div id="toast"></div>
   </div>
@@ -41,7 +41,7 @@
     <ul class="help">
       <li><b>Cameras:</b> click the map (or keys 1-9). Only one camera at a time.</li>
       <li><b>Report:</b> select the room's camera, press REPORT, pick what is wrong. It takes a few seconds, then there is a cooldown.</li>
-      <li><b>Defend:</b> lower the monitor (SPACE), then close the door (A) or vent (D) when you hear something arrive.</li>
+      <li><b>Defend:</b> lower the monitor (SPACE). The door and vent are pitch black: hold the flashlight (Q / E) to see what is there, and close the door (A) or vent (D) before it gets in. Keep either shut too long and it jams.</li>
       <li><b>Not everything is real.</b> Semi-transparent things are not reportable.</li>
       <li>You lose if power runs out, overload fills, or something reaches you unblocked.</li>
     </ul>

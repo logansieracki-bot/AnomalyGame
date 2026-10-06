@@ -231,35 +231,60 @@ const Scene = (() => {
     }
   }
 
-  // Your room. Door on the left, vent on the right.
+  // Your room. Door on the left, vent on the right. Open doorway/vent are pitch black
+  // unless the flashlight is held on them; only then can you see what is there.
   function drawOffice(ctx, state) {
     ctx.fillStyle = '#0b0d0d'; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#101313'; ctx.fillRect(0, 470, W, 250);
-    // door
+
+    // ---- door ----
     ctx.fillStyle = '#050606'; ctx.fillRect(110, 120, 300, 450);
-    if (!state.door) {
-      ctx.fillStyle = '#020303'; ctx.fillRect(130, 140, 260, 430);
-      for (const e of state.atEntry('door')) drawFigure(ctx, 260, 570, 420, 0.9, true);
-    } else {
+    if (state.door) {
       ctx.fillStyle = '#2a2f2e'; ctx.fillRect(110, 120, 300, 450);
       ctx.fillStyle = '#1f2423'; ctx.fillRect(135, 150, 250, 190); ctx.fillRect(135, 370, 250, 170);
       ctx.fillStyle = '#6a706e'; ctx.beginPath(); ctx.arc(360, 360, 9, 0, 7); ctx.fill();
+    } else {
+      ctx.fillStyle = '#020303'; ctx.fillRect(130, 140, 260, 430);
+      if (state.flash.door) {
+        const g = ctx.createLinearGradient(0, 140, 0, 570); g.addColorStop(0, '#3a403f'); g.addColorStop(1, '#1b1f1e');
+        ctx.fillStyle = g; ctx.fillRect(130, 140, 260, 430);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        const rg = ctx.createRadialGradient(260, 380, 20, 260, 380, 420); rg.addColorStop(0, 'rgba(70,76,74,.5)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H); ctx.restore();
+        for (const e of state.atEntry('door')) drawFigure(ctx, 260, 570, 420, 1, true);
+        for (const f of state.fakes.filter(f => f.kind === 'door')) drawFigure(ctx, 260, 570, 420, (Math.random() < 0.2 ? 0.08 : 0.22), false);
+      }
     }
-    // vent
+
+    // ---- vent ----
     ctx.fillStyle = '#1b1f1f'; ctx.fillRect(850, 230, 280, 210);
     ctx.fillStyle = '#020303'; ctx.fillRect(865, 245, 250, 180);
-    if (!state.vent) {
-      for (const e of state.atEntry('vent')) {
-        ctx.fillStyle = '#e8ffe8'; ctx.fillRect(960, 320, 10, 7); ctx.fillRect(1010, 320, 10, 7);
-      }
-    } else {
+    if (state.vent) {
       ctx.fillStyle = '#343a39'; ctx.fillRect(865, 245, 250, 180);
       for (const x of [880, 925, 970, 1015, 1060]) { ctx.fillStyle = '#1c2120'; ctx.fillRect(x, 255, 18, 160); }
       ctx.fillStyle = '#6a706e';
       for (const [x, y] of [[872, 252], [1106, 252], [872, 416], [1106, 416]]) { ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill(); }
+    } else {
+      if (state.flash.vent) {
+        const g = ctx.createLinearGradient(0, 245, 0, 425); g.addColorStop(0, '#363c3b'); g.addColorStop(1, '#1d2221');
+        ctx.fillStyle = g; ctx.fillRect(865, 245, 250, 180);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        const rg = ctx.createRadialGradient(990, 335, 20, 990, 335, 360); rg.addColorStop(0, 'rgba(70,76,74,.5)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H); ctx.restore();
+        for (const e of state.atEntry('vent')) {
+          ctx.fillStyle = '#050606'; ctx.beginPath(); ctx.ellipse(990, 360, 95, 62, 0, 0, 7); ctx.fill();
+          ctx.fillStyle = '#e8ffe8'; ctx.fillRect(955, 345, 12, 8); ctx.fillRect(1012, 345, 12, 8);
+        }
+        for (const f of state.fakes.filter(f => f.kind === 'vent')) {
+          ctx.save(); ctx.globalAlpha = Math.random() < 0.2 ? 0.08 : 0.22; ctx.fillStyle = '#d8e8d8';
+          ctx.beginPath(); ctx.ellipse(990, 360, 95, 62, 0, 0, 7); ctx.fill();
+          ctx.fillStyle = '#000'; ctx.fillRect(955, 345, 12, 8); ctx.fillRect(1012, 345, 12, 8); ctx.restore();
+        }
+      }
     }
-    for (const x of [880, 925, 970, 1015, 1060]) { if (!state.vent) { ctx.fillStyle = 'rgba(60,66,64,.55)'; ctx.fillRect(x, 255, 6, 160); } }
-    // desk
+    if (!state.vent) for (const x of [880, 925, 970, 1015, 1060]) { ctx.fillStyle = 'rgba(60,66,64,.55)'; ctx.fillRect(x, 255, 6, 160); }
+
+    // ---- desk ----
     ctx.fillStyle = '#161a19'; ctx.fillRect(0, 600, W, 120);
     ctx.fillStyle = '#222827'; ctx.fillRect(0, 600, W, 10);
     ctx.fillStyle = '#1b201f'; ctx.fillRect(520, 560, 240, 50);

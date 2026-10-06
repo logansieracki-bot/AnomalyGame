@@ -7,10 +7,10 @@ body { display: flex; align-items: center; justify-content: center; font-family:
 #hud { position: absolute; inset: 0; font-size: 1.15cqw; pointer-events: none; text-shadow: 0 0 .4cqw #000; }
 #hud button, #hud #reportMenu { pointer-events: auto; }
 
-button { font: inherit; color: #d6efd6; background: rgba(110,140,110,.55); border: .15cqw solid rgba(190,230,190,.35); padding: .5cqw .9cqw; cursor: pointer; }
-button:hover:not(:disabled) { background: rgba(140,180,140,.7); }
+button { font: inherit; color: #d6efd6; background: #3b4a3b; border: .15cqw solid #7f9f7f; text-shadow: none; padding: .5cqw .9cqw; cursor: pointer; }
+button:hover:not(:disabled) { background: #4d614d; }
 button:disabled { opacity: .45; cursor: default; }
-button.active { background: rgba(190,230,190,.85); color: #0a140a; }
+button.active { background: #b9d9b9; color: #0a140a; }
 
 #camLabel { position: absolute; left: 2cqw; top: 2cqw; font-size: 1.8cqw; letter-spacing: .1cqw; }
 #camLabel::after { content: " \25CF REC"; color: #d33; animation: blink 1.2s steps(2) infinite; }
@@ -28,7 +28,7 @@ button.active { background: rgba(190,230,190,.85); color: #0a140a; }
 
 #reportPanel { position: absolute; left: 2cqw; bottom: 3cqw; width: 22cqw; }
 #reportBtn { width: 100%; padding: .9cqw; font-size: 1.5cqw; }
-#reportMenu { background: rgba(10,20,10,.92); border: .15cqw solid rgba(190,230,190,.35); margin-bottom: .5cqw; position: absolute; bottom: 100%; left: 0; width: 100%; }
+#reportMenu { background: #0a140a; border: .15cqw solid rgba(190,230,190,.35); margin-bottom: .5cqw; position: absolute; bottom: 100%; left: 0; width: 100%; }
 #reportMenu h4 { margin: 0; padding: .4cqw .8cqw; font-size: 1cqw; background: rgba(110,140,110,.35); letter-spacing: .1cqw; }
 #reportMenu button small { display: block; opacity: .6; font-size: .85cqw; }
 #reportMenu button { display: block; width: 100%; text-align: left; border: none; border-bottom: .1cqw solid rgba(190,230,190,.15); background: transparent; }
@@ -37,15 +37,15 @@ button.active { background: rgba(190,230,190,.85); color: #0a140a; }
 
 #mapWrap { position: absolute; right: 2cqw; bottom: 3cqw; width: 27cqw; }
 #mapTitle { text-align: right; font-size: 1.3cqw; letter-spacing: .1cqw; margin-bottom: .4cqw; }
-#map { position: relative; width: 100%; height: 22cqw; background: rgba(0,0,0,.35); border: .1cqw solid rgba(190,230,190,.2); }
+#map { position: relative; width: 100%; height: 22cqw; background: #070b07; border: .15cqw solid #7f9f7f; }
 #map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-#map svg line { stroke: rgba(190,230,190,.55); stroke-width: .6; vector-effect: non-scaling-stroke; stroke-width: 2px; }
+#map svg line { stroke: #6f8f6f; vector-effect: non-scaling-stroke; stroke-width: 2px; }
 #map svg line.vent { stroke-dasharray: 5 4; }
 #map button { position: absolute; width: 24%; height: 16%; font-size: .9cqw; line-height: 1.1; padding: .1cqw; white-space: pre-line; }
 #map button i { position: absolute; left: .25cqw; top: .15cqw; font-style: normal; font-size: .75cqw; opacity: .75; }
 #map button b { position: absolute; right: .3cqw; top: .15cqw; font-size: .75cqw; font-weight: normal; opacity: .75; }
-#map .you { background: rgba(20,20,20,.9); color: #aaa; cursor: default; border-style: dashed; }
-#map .tag { position: absolute; font-size: .8cqw; opacity: .7; letter-spacing: .05cqw; }
+#map .you { background: #111; color: #888; cursor: default; border-style: dashed; border-color: #6f8f6f; opacity: 1; }
+#map .tag { position: absolute; font-size: .8cqw; color: #9fbf9f; background: #070b07; padding: 0 .3cqw; letter-spacing: .05cqw; }
 
 #monitorBtn { position: absolute; left: 50%; bottom: 2cqw; transform: translateX(-50%); font-size: 1.3cqw; padding: .7cqw 2cqw; }
 #defense { position: absolute; left: 50%; bottom: 7cqw; transform: translateX(-50%); display: flex; gap: 2cqw; }
@@ -53,6 +53,7 @@ button.active { background: rgba(190,230,190,.85); color: #0a140a; }
 .def button { width: 100%; }
 .strain { height: .8cqw; margin-top: .4cqw; background: rgba(0,0,0,.6); border: .1cqw solid rgba(190,230,190,.4); }
 .strain i { display: block; height: 100%; width: 0; background: #cf8f4f; }
+.def button.light { margin-top: .3cqw; font-size: 1.1cqw; padding: .5cqw; }
 .def small { display: block; min-height: 1.4cqw; font-size: .95cqw; color: #ff8f8f; }
 #defense button { font-size: 1.6cqw; padding: 1cqw 2.5cqw; }
 #toast { position: absolute; left: 50%; top: 14cqw; transform: translateX(-50%); font-size: 1.6cqw; opacity: 0; transition: opacity .25s; text-align: center; padding: .5cqw 1.5cqw; background: rgba(0,0,0,.6); }

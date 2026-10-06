@@ -10,6 +10,7 @@ const Game = (() => {
     power: 100, overload: 0,
     door: false, vent: false,
     strain: { door: 0, vent: 0 }, jam: { door: 0, vent: 0 },
+    flash: { door: false, vent: false }, entryFake: [],
     anomalies: [], halluc: [], entities: [],
     nextSpawn: 0,
     report: { state: 'idle', t: 0, dur: 0, room: null, type: null, menuOpen: false },
@@ -32,6 +33,7 @@ const Game = (() => {
       running: true, over: null, night: n, cfg, t: 0, cam: 'living', monitor: true,
       power: 100, overload: 0, door: false, vent: false,
       strain: { door: 0, vent: 0 }, jam: { door: 0, vent: 0 },
+      flash: { door: false, vent: false }, entryFake: [],
       anomalies: [], halluc: [], nextSpawn: rand([8, 12]), toast: null, staticT: 0.3,
       stats: { correct: 0, wrong: 0 }, events: [],
       report: { state: 'idle', t: 0, dur: 0, room: null, type: null, menuOpen: false },
@@ -52,6 +54,13 @@ const Game = (() => {
     if (G[kind] === on) return;
     if (on && G.jam[kind] > 0) { toast(`${kind.toUpperCase()} IS JAMMED OPEN`, 'bad'); emit('reject'); return; }
     G[kind] = on; if (on) emit('block');
+  }
+  // Flashlight: hold to light the doorway/vent. It is the only way to see what is there.
+  function setFlash(kind, on) {
+    if (!G.running) return;
+    if (on && (G.monitor || G[kind])) return;               // not while on cameras or while that entry is shut
+    if (G.flash[kind] === on) return;
+    G.flash[kind] = on; if (on) emit('click');
   }
   function toggleBlock(kind) { setBlock(kind, !G[kind]); }
 
@@ -130,9 +139,11 @@ const Game = (() => {
     if (G.toast) { G.toast.t -= dt; if (G.toast.t <= 0) G.toast = null; }
 
     // power
-    const drain = (G.monitor ? 0.28 : 0.06) + (G.door ? 0.15 : 0) + (G.vent ? 0.15 : 0);
+    const drain = (G.monitor ? 0.28 : 0.06) + (G.door ? 0.15 : 0) + (G.vent ? 0.15 : 0) + (G.flash.door ? 0.3 : 0) + (G.flash.vent ? 0.3 : 0);
     G.power -= drain * dt;
     if (G.power <= 0) { G.power = 0; return lose('POWER OUT'); }
+
+    for (const k of ['door', 'vent']) if (G.monitor || G[k]) G.flash[k] = false;
 
     // door/vent wear: keep one shut too long and it jams open for a while
     const build = STRAIN.build + G.night * 0.5;
@@ -150,6 +161,16 @@ const Game = (() => {
 
     // hallucinations
     if (cfg.halluc > 0 && Math.random() < cfg.halluc * 0.05 * (1 + 2 * progress()) * dt) spawnHallucination();
+    // fake things at your door/vent: only visible under the flashlight, but they sound like the real thing
+    if (cfg.halluc > 0 && Math.random() < cfg.halluc * 0.02 * (1 + 2 * progress()) * dt) {
+      const kind = Math.random() < 0.5 ? 'door' : 'vent';
+      G.entryFake.push({ kind, life: 2.5 + Math.random() * 1.5, tellT: 0 });
+    }
+    for (const f of G.entryFake) {
+      f.life -= dt; f.tellT -= dt;
+      if (f.tellT <= 0) { emit('tell', f.kind === 'vent' ? 'scratch' : (Math.random() < 0.5 ? 'knock' : 'breath')); f.tellT = 0.9; }
+    }
+    G.entryFake = G.entryFake.filter(f => f.life > 0);
     for (const h of G.halluc) h.life -= dt;
     G.halluc = G.halluc.filter(h => h.life > 0);
 
@@ -193,7 +214,7 @@ const Game = (() => {
   }
 
   return {
-    G, start, update, switchCam, toggleMonitor, toggleBlock, setBlock,
+    G, start, update, switchCam, toggleMonitor, toggleBlock, setBlock, setFlash,
     toggleReportMenu, submitReport, hourIndex, roomOf, atEntryStage, progress,
     entitiesAtEntry: kind => G.entities.filter(e => e.away <= 0 && atEntryStage(e) && ENTITIES[e.id].entry === kind),
   };

@@ -81,6 +81,7 @@ Inspired by FNAF 4: audio tells and fast reactions.
 - Entry points: **door** and **vents** (window possible later).
 - Each entity approaches a specific entry point with an audio tell (breathing, scratching, knocking, vent rattle).
 - Block it with the right action (close door, seal vent) **before it arrives**. Wasting a block costs power.
+- **Flashlights:** the open doorway and vent are pitch black. Hold the flashlight on one (Q door, E vent) to see what is there; it drains power and cannot be used while the monitor is up or that entry is shut. Audio tells still play, but on later nights **fake tells and faint figures** appear at the door/vent too (hallucinations), so a knock does not always mean something is there. Real entities are solid; fakes are semi-transparent and flicker.
 - **No camping:** the door and vent accumulate **strain** while shut (about 8s from empty). At 100 they **jam open for 10s** and can't be closed. Strain drains slowly while they are open, so repeatedly toggling still adds up. You also can't use them while the monitor is up.
 - Watching an entry point means not watching cameras.
 
