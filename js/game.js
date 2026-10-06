@@ -9,6 +9,7 @@ const Game = (() => {
     cam: 'living', monitor: true,
     power: 100, overload: 0,
     door: false, vent: false,
+    strain: { door: 0, vent: 0 }, jam: { door: 0, vent: 0 },
     anomalies: [], halluc: [], entities: [],
     nextSpawn: 0,
     report: { state: 'idle', t: 0, dur: 0, room: null, type: null, menuOpen: false },
@@ -30,6 +31,7 @@ const Game = (() => {
     Object.assign(G, {
       running: true, over: null, night: n, cfg, t: 0, cam: 'living', monitor: true,
       power: 100, overload: 0, door: false, vent: false,
+      strain: { door: 0, vent: 0 }, jam: { door: 0, vent: 0 },
       anomalies: [], halluc: [], nextSpawn: rand([8, 12]), toast: null, staticT: 0.3,
       stats: { correct: 0, wrong: 0 }, events: [],
       report: { state: 'idle', t: 0, dur: 0, room: null, type: null, menuOpen: false },
@@ -48,6 +50,7 @@ const Game = (() => {
   function setBlock(kind, on) {
     if (!G.running || G.monitor) return;                  // you must be at the door/vent, not on cameras
     if (G[kind] === on) return;
+    if (on && G.jam[kind] > 0) { toast(`${kind.toUpperCase()} IS JAMMED OPEN`, 'bad'); emit('reject'); return; }
     G[kind] = on; if (on) emit('block');
   }
   function toggleBlock(kind) { setBlock(kind, !G[kind]); }
@@ -127,9 +130,19 @@ const Game = (() => {
     if (G.toast) { G.toast.t -= dt; if (G.toast.t <= 0) G.toast = null; }
 
     // power
-    const drain = (G.monitor ? 0.28 : 0.06) + (G.door ? 0.12 : 0) + (G.vent ? 0.12 : 0);
+    const drain = (G.monitor ? 0.28 : 0.06) + (G.door ? 0.15 : 0) + (G.vent ? 0.15 : 0);
     G.power -= drain * dt;
     if (G.power <= 0) { G.power = 0; return lose('POWER OUT'); }
+
+    // door/vent wear: keep one shut too long and it jams open for a while
+    const build = STRAIN.build + G.night * 0.5;
+    for (const k of ['door', 'vent']) {
+      if (G.jam[k] > 0) { G.jam[k] -= dt; if (G.jam[k] <= 0) G.strain[k] = 30; continue; }
+      if (G[k]) {
+        G.strain[k] += build * dt;
+        if (G.strain[k] >= 100) { G.strain[k] = 100; G[k] = false; G.jam[k] = STRAIN.jam; toast(`${k.toUpperCase()} JAMMED OPEN`, 'bad'); emit('jam'); }
+      } else G.strain[k] = Math.max(0, G.strain[k] - STRAIN.recover * dt);
+    }
 
     // anomalies
     G.nextSpawn -= dt;

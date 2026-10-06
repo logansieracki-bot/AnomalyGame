@@ -19,7 +19,7 @@ Watch cameras -> spot something wrong -> report (delay) -> cooldown
 ```
 
 ## Camera UI
-- FNAF-style **floor-plan map** showing every room and **where the player's room is**.
+- FNAF-style **floor-plan map**: rooms joined by hallway lines, your office ("YOU") at the bottom, the door and vent shown as the two links into it. Each room shows its camera number and **how many steps it is from you**; the header names the current room and its distance. Entity paths follow these hallways.
 - Select a room camera from the map. Only one camera is viewed at a time.
 - Viewing cameras drains monitor power; lowering the monitor saves power but blinds you.
 - Later nights: the map glitches, mislabels rooms, or drops cameras.
@@ -49,8 +49,8 @@ Reporting the right type fixes and removes the anomaly. Anomalies may **stack** 
 |---|---|
 | Lighting change | lamp on/off, TV glow, light under a door |
 | Structural change | door/window/cabinet open or closed, curtain moved |
-| Misplaced shadow | shadow with no source, wrong direction |
-| Surface change | stain, crack, wet floor, smeared mirror |
+| Misplaced shadow | hard-edged dark slab cast on a wall (never a person shape, so it is not confused with entities) |
+| Surface change | glossy wet spot on the floor, or a crack in the wall |
 | Relocated object | remote, mug, shoes in a new spot |
 | Object rotation | frame turned, chair rotated |
 | Missing object | vase, book, or item gone |
@@ -81,6 +81,7 @@ Inspired by FNAF 4: audio tells and fast reactions.
 - Entry points: **door** and **vents** (window possible later).
 - Each entity approaches a specific entry point with an audio tell (breathing, scratching, knocking, vent rattle).
 - Block it with the right action (close door, seal vent) **before it arrives**. Wasting a block costs power.
+- **No camping:** the door and vent accumulate **strain** while shut (about 8s from empty). At 100 they **jam open for 10s** and can't be closed. Strain drains slowly while they are open, so repeatedly toggling still adds up. You also can't use them while the monitor is up.
 - Watching an entry point means not watching cameras.
 
 ## Resources and lose conditions

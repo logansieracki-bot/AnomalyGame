@@ -30,17 +30,30 @@ button.active { background: rgba(190,230,190,.85); color: #0a140a; }
 #reportBtn { width: 100%; padding: .9cqw; font-size: 1.5cqw; }
 #reportMenu { background: rgba(10,20,10,.92); border: .15cqw solid rgba(190,230,190,.35); margin-bottom: .5cqw; position: absolute; bottom: 100%; left: 0; width: 100%; }
 #reportMenu h4 { margin: 0; padding: .4cqw .8cqw; font-size: 1cqw; background: rgba(110,140,110,.35); letter-spacing: .1cqw; }
+#reportMenu button small { display: block; opacity: .6; font-size: .85cqw; }
 #reportMenu button { display: block; width: 100%; text-align: left; border: none; border-bottom: .1cqw solid rgba(190,230,190,.15); background: transparent; }
 #reportMenu button:hover { background: rgba(140,180,140,.5); }
 #reportStatus { margin-top: .5cqw; min-height: 2cqw; font-size: 1.05cqw; }
 
-#map { position: absolute; right: 2cqw; bottom: 3cqw; width: 22cqw; display: grid; grid-template-columns: repeat(3, 1fr); gap: .5cqw; }
-#map button { height: 4.2cqw; font-size: .95cqw; line-height: 1.1; padding: .2cqw; position: relative; white-space: pre-line; }
-#map .you { grid-column: 2; background: rgba(60,60,60,.6); color: #aaa; cursor: default; }
-#map button.alert::after { content: ""; position: absolute; top: .3cqw; right: .3cqw; width: .8cqw; height: .8cqw; background: #d33; border-radius: 50%; }
+#mapWrap { position: absolute; right: 2cqw; bottom: 3cqw; width: 27cqw; }
+#mapTitle { text-align: right; font-size: 1.3cqw; letter-spacing: .1cqw; margin-bottom: .4cqw; }
+#map { position: relative; width: 100%; height: 22cqw; background: rgba(0,0,0,.35); border: .1cqw solid rgba(190,230,190,.2); }
+#map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+#map svg line { stroke: rgba(190,230,190,.55); stroke-width: .6; vector-effect: non-scaling-stroke; stroke-width: 2px; }
+#map svg line.vent { stroke-dasharray: 5 4; }
+#map button { position: absolute; width: 24%; height: 16%; font-size: .9cqw; line-height: 1.1; padding: .1cqw; white-space: pre-line; }
+#map button i { position: absolute; left: .25cqw; top: .15cqw; font-style: normal; font-size: .75cqw; opacity: .75; }
+#map button b { position: absolute; right: .3cqw; top: .15cqw; font-size: .75cqw; font-weight: normal; opacity: .75; }
+#map .you { background: rgba(20,20,20,.9); color: #aaa; cursor: default; border-style: dashed; }
+#map .tag { position: absolute; font-size: .8cqw; opacity: .7; letter-spacing: .05cqw; }
 
 #monitorBtn { position: absolute; left: 50%; bottom: 2cqw; transform: translateX(-50%); font-size: 1.3cqw; padding: .7cqw 2cqw; }
 #defense { position: absolute; left: 50%; bottom: 7cqw; transform: translateX(-50%); display: flex; gap: 2cqw; }
+.def { text-align: center; width: 16cqw; pointer-events: auto; }
+.def button { width: 100%; }
+.strain { height: .8cqw; margin-top: .4cqw; background: rgba(0,0,0,.6); border: .1cqw solid rgba(190,230,190,.4); }
+.strain i { display: block; height: 100%; width: 0; background: #cf8f4f; }
+.def small { display: block; min-height: 1.4cqw; font-size: .95cqw; color: #ff8f8f; }
 #defense button { font-size: 1.6cqw; padding: 1cqw 2.5cqw; }
 #toast { position: absolute; left: 50%; top: 14cqw; transform: translateX(-50%); font-size: 1.6cqw; opacity: 0; transition: opacity .25s; text-align: center; padding: .5cqw 1.5cqw; background: rgba(0,0,0,.6); }
 #toast.show { opacity: 1; }

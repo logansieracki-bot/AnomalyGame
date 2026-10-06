@@ -1,37 +1,37 @@
 // Static game data: rooms, anomaly types, entities, nights.
 const W = 1280, H = 720;
 
-// cell = [col,row] on the 3-wide FNAF-style map; keys 1-9 select in this order.
+// pos = [left, top] in percent of the floor-plan map; keys 1-9 select in this order.
 const ROOMS = [
-  { id: 'bedroom1',  name: 'Bedroom 1',      label: 'Bedroom\n1',      cell: [0, 0], wall: 24, floor: 15 },
-  { id: 'bathroom1', name: 'Bathroom 1',     label: 'Bathroom\n1',     cell: [1, 0], wall: 30, floor: 20 },
-  { id: 'garage',    name: 'Garage',         label: 'Garage',          cell: [2, 0], wall: 20, floor: 13 },
-  { id: 'bedroom2',  name: 'Bedroom 2',      label: 'Bedroom\n2',      cell: [0, 1], wall: 26, floor: 16 },
-  { id: 'bathroom2', name: 'Bathroom 2',     label: 'Bathroom\n2',     cell: [1, 1], wall: 32, floor: 21 },
-  { id: 'laundry',   name: 'Laundry Room',   label: 'Laundry\nRoom',   cell: [2, 1], wall: 27, floor: 18 },
-  { id: 'living',    name: 'Living Room',    label: 'Living\nRoom',    cell: [0, 2], wall: 22, floor: 14 },
-  { id: 'kitchen',   name: 'Kitchen',        label: 'Kitchen',         cell: [1, 2], wall: 29, floor: 19 },
-  { id: 'basement',  name: 'Basement Stairs', label: 'Basement\nStairs', cell: [2, 2], wall: 18, floor: 12 },
+  { id: 'bedroom1',  name: 'Bedroom 1',      label: 'Bedroom\n1',      pos: [2, 2], wall: 24, floor: 15 },
+  { id: 'bathroom1', name: 'Bathroom 1',     label: 'Bathroom\n1',     pos: [38, 2], wall: 30, floor: 20 },
+  { id: 'garage',    name: 'Garage',         label: 'Garage',          pos: [74, 2], wall: 20, floor: 13 },
+  { id: 'bedroom2',  name: 'Bedroom 2',      label: 'Bedroom\n2',      pos: [2, 30], wall: 26, floor: 16 },
+  { id: 'bathroom2', name: 'Bathroom 2',     label: 'Bathroom\n2',     pos: [38, 30], wall: 32, floor: 21 },
+  { id: 'laundry',   name: 'Laundry Room',   label: 'Laundry\nRoom',   pos: [74, 30], wall: 27, floor: 18 },
+  { id: 'living',    name: 'Living Room',    label: 'Living\nRoom',    pos: [2, 58], wall: 22, floor: 14 },
+  { id: 'kitchen',   name: 'Kitchen',        label: 'Kitchen',         pos: [38, 58], wall: 29, floor: 19 },
+  { id: 'basement',  name: 'Basement Stairs', label: 'Basement\nStairs', pos: [74, 58], wall: 18, floor: 12 },
 ];
 const ROOM = Object.fromEntries(ROOMS.map(r => [r.id, r]));
 
 // Dropdown entries for environmental reports.
 const ANOMALY_TYPES = [
-  { id: 'lighting',   label: 'Lighting change' },
-  { id: 'structural', label: 'Structural change' },
-  { id: 'shadow',     label: 'Misplaced shadow' },
-  { id: 'surface',    label: 'Surface change' },
-  { id: 'relocated',  label: 'Relocated object' },
-  { id: 'rotation',   label: 'Object rotation' },
-  { id: 'missing',    label: 'Missing object' },
-  { id: 'new',        label: 'New object' },
+  { id: 'lighting', hint: 'A lamp on/off, room brighter or darker',   label: 'Lighting change' },
+  { id: 'structural', hint: 'A door open, curtains moved', label: 'Structural change' },
+  { id: 'shadow', hint: 'A dark shape cast on a wall',     label: 'Misplaced shadow' },
+  { id: 'surface', hint: 'Wet spots on the floor, cracks in the wall',    label: 'Surface change' },
+  { id: 'relocated', hint: 'An object in a different spot',  label: 'Relocated object' },
+  { id: 'rotation', hint: 'An object turned or tilted',   label: 'Object rotation' },
+  { id: 'missing', hint: 'Something that should be here is gone',    label: 'Missing object' },
+  { id: 'new', hint: 'Something here that was not before',        label: 'New object' },
 ];
 
 // path = rooms it walks through; after the last room it is at its entry point.
 const ENTITIES = {
   visitor: { name: 'The Visitor', entry: 'door', path: ['garage', 'laundry', 'kitchen', 'living'], tell: 'knock' },
-  crawler: { name: 'The Crawler', entry: 'vent', path: ['basement', 'bathroom2', 'bedroom2'],      tell: 'scratch' },
-  watcher: { name: 'The Watcher', entry: 'door', path: ['bedroom1', 'bathroom1', 'kitchen'],       tell: 'breath' },
+  crawler: { name: 'The Crawler', entry: 'vent', path: ['bedroom2', 'bathroom2', 'laundry', 'basement'], tell: 'scratch' },
+  watcher: { name: 'The Watcher', entry: 'door', path: ['bedroom1', 'bathroom1', 'bathroom2', 'kitchen'], tell: 'breath' },
 };
 
 // spawn = seconds between anomalies, active = max simultaneous (+2 by 6am),
@@ -48,3 +48,27 @@ const NIGHTS = [
 
 const NIGHT_LENGTH = 360;          // 6 minutes: 60s per in-game hour
 const HOURS = ['12 AM', '1 AM', '2 AM', '3 AM', '4 AM', '5 AM', '6 AM'];
+
+// Hallways between rooms (drawn as lines on the map; entity paths must follow these).
+const EDGES = [
+  ['bedroom1', 'bathroom1'], ['bathroom1', 'garage'], ['bedroom1', 'bedroom2'], ['bathroom1', 'bathroom2'],
+  ['garage', 'laundry'], ['bedroom2', 'bathroom2'], ['bathroom2', 'laundry'], ['bedroom2', 'living'],
+  ['bathroom2', 'kitchen'], ['laundry', 'kitchen'], ['laundry', 'basement'], ['living', 'kitchen'],
+  ['kitchen', 'basement'], ['basement', 'bathroom2'],
+];
+// Rooms that touch your office: the door opens onto living room + kitchen, the vent onto the basement stairs.
+const ENTRY_LINKS = { door: ['living', 'kitchen'], vent: ['basement'] };
+
+// Steps from each room to you (1 = next to your office), shown on the map.
+const DIST = (() => {
+  const d = {}, q = [];
+  for (const rooms of Object.values(ENTRY_LINKS)) for (const r of rooms) { d[r] = 1; q.push(r); }
+  while (q.length) {
+    const r = q.shift();
+    for (const [a, b] of EDGES) { const o = a === r ? b : b === r ? a : null; if (o && d[o] === undefined) { d[o] = d[r] + 1; q.push(o); } }
+  }
+  return d;
+})();
+
+// Door and vent wear out if you keep them shut: strain builds while closed, and at 100 they jam open.
+const STRAIN = { build: 12, recover: 5, jam: 10 };

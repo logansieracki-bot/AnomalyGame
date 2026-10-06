@@ -24,12 +24,12 @@
       <div id="reportStatus"></div>
     </div>
 
-    <div id="map"></div>
+    <div id="mapWrap"><div id="mapTitle"></div><div id="map"></div></div>
 
     <button id="monitorBtn">LOWER MONITOR [SPACE]</button>
     <div id="defense" class="hidden">
-      <button id="doorBtn">DOOR [A]</button>
-      <button id="ventBtn">VENT [D]</button>
+      <div class="def"><button id="doorBtn">DOOR [A]</button><div class="strain"><i id="doorStrain"></i></div><small id="doorNote"></small></div>
+      <div class="def"><button id="ventBtn">VENT [D]</button><div class="strain"><i id="ventStrain"></i></div><small id="ventNote"></small></div>
     </div>
     <div id="toast"></div>
   </div>

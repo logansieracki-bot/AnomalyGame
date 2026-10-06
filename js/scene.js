@@ -53,10 +53,13 @@ const Scene = (() => {
         break;
       case 'structural':
         a.target = r() < 0.5 ? 'door' : 'window'; a.amount = 0.4 + 0.6 * mag; break;
-      case 'shadow':
-        a.x = 160 + r() * 960; a.y = 140 + r() * 260; a.size = 0.6 + r() * 0.5; a.alpha = 0.2 + 0.45 * mag; a.shape = r() < 0.5 ? 'figure' : 'blob'; break;
-      case 'surface':
-        a.x = 180 + r() * 920; a.y = 450 + r() * 220; a.r = 18 + 55 * mag; a.alpha = 0.18 + 0.4 * mag; break;
+      case 'shadow':   // hard-edged dark slab cast on the WALL; never on the floor, never a person shape
+        a.x = 200 + r() * 880; a.y = 40 + r() * 80; a.w = 50 + r() * 70; a.h = 100 + r() * 70;
+        a.skew = (r() - 0.5) * 70; a.alpha = 0.3 + 0.45 * mag; break;
+      case 'surface':  // wet sheen on the FLOOR, or a crack in the WALL
+        if (r() < 0.6) { a.shape = 'puddle'; a.x = 220 + r() * 840; a.y = 480 + r() * 190; a.r = 22 + 55 * mag; a.alpha = 0.25 + 0.4 * mag; }
+        else { a.shape = 'crack'; a.x = 220 + r() * 840; a.y = 30 + r() * 80; a.len = 80 + 120 * mag; a.alpha = 0.4 + 0.5 * mag; a.seed = Math.floor(r() * 1e6); }
+        break;
       case 'relocated': {
         const t = pick(movable, r); a.target = t.id;
         a.dx = (r() < 0.5 ? -1 : 1) * (30 + 150 * mag); a.dy = (r() - 0.5) * 30; break;
@@ -190,13 +193,22 @@ const Scene = (() => {
 
     // anomalies drawn on top of the room
     for (const s of A.stains) {
-      const sg = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r);
-      sg.addColorStop(0, `rgba(0,0,0,${s.alpha})`); sg.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(s.x, s.y, s.r * 1.5, s.r * 0.8, 0, 0, 7); ctx.fill();
+      if (s.shape === 'puddle') {                     // light, glossy, on the floor
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = `rgba(110,125,125,${s.alpha})`; ctx.beginPath(); ctx.ellipse(s.x, s.y, s.r * 1.7, s.r * 0.7, 0, 0, 7); ctx.fill();
+        ctx.strokeStyle = `rgba(200,215,215,${s.alpha * 0.9})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(s.x - s.r * 0.3, s.y - s.r * 0.15, s.r * 0.8, s.r * 0.25, 0, 3.4, 5.6); ctx.stroke();
+        ctx.restore();
+      } else {                                        // thin jagged dark line on the wall
+        const rr = mulberry(s.seed); ctx.save(); ctx.strokeStyle = `rgba(0,0,0,${s.alpha})`; ctx.lineWidth = 3; ctx.lineJoin = 'miter';
+        let x = s.x, y = s.y; ctx.beginPath(); ctx.moveTo(x, y);
+        for (let i = 0; i < 9; i++) { x += (rr() - 0.5) * 40; y += s.len / 9; ctx.lineTo(x, y); }
+        ctx.stroke(); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(s.x, s.y + s.len * 0.45); ctx.lineTo(s.x + 35, s.y + s.len * 0.6); ctx.lineTo(s.x + 55, s.y + s.len * 0.55); ctx.stroke();
+        ctx.restore();
+      }
     }
-    for (const s of A.shadows) {
-      if (s.shape === 'figure') drawFigure(ctx, s.x, Math.min(s.y + 200, HORIZON + 20), 300 * s.size, s.alpha, true);
-      else { ctx.fillStyle = `rgba(0,0,0,${s.alpha})`; ctx.beginPath(); ctx.ellipse(s.x, s.y + 80, 90 * s.size, 60 * s.size, 0.3, 0, 7); ctx.fill(); }
+    for (const s of A.shadows) {                      // hard-edged slab on the wall
+      ctx.fillStyle = `rgba(0,0,0,${s.alpha})`; ctx.beginPath();
+      ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + s.w, s.y + s.skew); ctx.lineTo(s.x + s.w, s.y + s.h + s.skew); ctx.lineTo(s.x, s.y + s.h); ctx.fill();
     }
     for (const n of A.news) {
       ctx.save(); ctx.translate(n.x, n.y);

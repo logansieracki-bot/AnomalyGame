@@ -33,23 +33,37 @@
   }
 
   // ---- DOM setup ----
+  // FNAF-style floor plan: rooms joined by hallway lines, your office at the bottom.
   const mapEl = $('map'), mapBtns = {};
+  const NW = 24, NH = 16, YOU_POS = [38, 82];
+  const center = p => [p[0] + NW / 2, p[1] + NH / 2];
+  { const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none');
+    const line = (a, b, cls) => { const l = document.createElementNS(NS, 'line'); const [x1, y1] = center(a), [x2, y2] = center(b);
+      l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2); if (cls) l.setAttribute('class', cls); svg.appendChild(l); };
+    for (const [a, b] of EDGES) line(ROOM[a].pos, ROOM[b].pos);
+    for (const r of ENTRY_LINKS.door) line(YOU_POS, ROOM[r].pos);
+    for (const r of ENTRY_LINKS.vent) line(YOU_POS, ROOM[r].pos, 'vent');
+    mapEl.appendChild(svg);
+    const tag = (t, x, y) => { const d = document.createElement('span'); d.className = 'tag'; d.textContent = t; d.style.left = x + '%'; d.style.top = y + '%'; mapEl.appendChild(d); };
+    tag('DOOR', 22, 77); tag('VENT', 68, 77); }
   ROOMS.forEach((r, i) => {
     const b = document.createElement('button');
-    b.textContent = r.label; b.style.gridColumn = r.cell[0] + 1; b.style.gridRow = r.cell[1] + 1;
-    b.title = `${r.name} [${i + 1}]`;
+    b.innerHTML = `<i>${i + 1}</i><b>${DIST[r.id]}</b>` + r.label.replace('\n', '<br>');
+    b.style.left = r.pos[0] + '%'; b.style.top = r.pos[1] + '%';
+    b.title = `${r.name} [${i + 1}] - ${DIST[r.id]} step(s) from you`;
     b.onclick = () => Game.switchCam(r.id);
     mapEl.appendChild(b); mapBtns[r.id] = b;
   });
   const you = document.createElement('button'); you.className = 'you'; you.textContent = 'YOU'; you.disabled = true;
-  you.style.gridRow = 4; mapEl.appendChild(you);
+  you.style.left = YOU_POS[0] + '%'; you.style.top = YOU_POS[1] + '%'; mapEl.appendChild(you);
 
   function buildMenu() {
     const m = $('reportMenu'); m.innerHTML = '';
     const head = t => { const h = document.createElement('h4'); h.textContent = t; m.appendChild(h); };
-    const item = (label, type) => { const b = document.createElement('button'); b.textContent = label; b.onclick = () => Game.submitReport(type); m.appendChild(b); };
+    const item = (label, type, hint) => { const b = document.createElement('button'); b.innerHTML = label + (hint ? `<small>${hint}</small>` : ''); b.onclick = () => Game.submitReport(type); m.appendChild(b); };
     head('ENVIRONMENT');
-    ANOMALY_TYPES.forEach(t => item(t.label, t.id));
+    ANOMALY_TYPES.forEach(t => item(t.label, t.id, t.hint));
     if (G.cfg.ents.length) { head('ENTITY PRESENCE'); G.cfg.ents.forEach(id => item(ENTITIES[id].name, 'ent:' + id)); }
   }
 
@@ -106,6 +120,7 @@
         case 'accept': Sfx.accept(); break;
         case 'reject': Sfx.reject(); break;
         case 'block': Sfx.blockDoor(); break;
+        case 'jam': Sfx.jam(); break;
         case 'tell': Sfx[ev.data](); break;
         case 'whisper': Sfx.whisper(); break;
         case 'spawn': break;
@@ -119,6 +134,7 @@
   function updateHud() {
     const room = ROOM[G.cam];
     $('camLabel').textContent = G.monitor ? `CAM ${ROOMS.indexOf(room) + 1} - ${room.name.toUpperCase()}` : 'OFFICE';
+    $('mapTitle').textContent = `${room.name.toUpperCase()}  |  ${DIST[room.id]} STEP${DIST[room.id] > 1 ? 'S' : ''} FROM YOU`;
     $('clock').textContent = HOURS[Game.hourIndex()];
     $('powerFill').style.width = G.power + '%';
     $('powerFill').style.background = G.power < 25 ? '#d96' : '#8fcf8f';
@@ -127,9 +143,15 @@
     $('monitorBtn').textContent = G.monitor ? 'LOWER MONITOR [SPACE]' : 'RAISE MONITOR [SPACE]';
     $('defense').classList.toggle('hidden', G.monitor);
     $('doorBtn').classList.toggle('active', G.door); $('ventBtn').classList.toggle('active', G.vent);
+    for (const k of ['door', 'vent']) {
+      $(k + 'Strain').style.width = G.strain[k] + '%';
+      $(k + 'Strain').style.background = G.strain[k] > 70 ? '#e55' : '#cf8f4f';
+      $(k + 'Note').textContent = G.jam[k] > 0 ? `JAMMED ${Math.ceil(G.jam[k])}s` : (G.strain[k] > 70 ? 'STRAINING' : '');
+      $(k + 'Btn').disabled = G.jam[k] > 0;
+    }
     $('doorBtn').textContent = G.door ? 'DOOR: CLOSED [A]' : 'DOOR: OPEN [A]';
     $('ventBtn').textContent = G.vent ? 'VENT: SEALED [D]' : 'VENT: OPEN [D]';
-    $('map').classList.toggle('hidden', !G.monitor);
+    $('mapWrap').classList.toggle('hidden', !G.monitor);
     $('reportPanel').classList.toggle('hidden', !G.monitor);
     for (const r of ROOMS) mapBtns[r.id].classList.toggle('active', r.id === G.cam);
 

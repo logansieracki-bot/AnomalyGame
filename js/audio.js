@@ -53,6 +53,7 @@ const Sfx = (() => {
     scratch()   { for (let i = 0; i < 4; i++) burst('bandpass', 3200 + i * 300, 4, 0.005, 0.07, 0.25, i * 0.09); },
     breath()    { burst('lowpass', 500, 1, 0.5, 0.7, 0.3); },
     whisper()   { burst('highpass', 4500, 1, 0.3, 0.6, 0.05); },
+    jam()       { burst('lowpass', 400, 1, 0.005, 0.5, 0.6); tone(45, 0.005, 0.6, 0.5, 'sawtooth'); },
     spawn()     { tone(60, 0.05, 0.4, 0.05, 'sine'); },
     jump()      { burst('bandpass', 1200, 0.5, 0.005, 0.8, 0.9); tone(60, 0.005, 0.8, 0.8, 'sawtooth'); },
     win()       { tone(523, 0.02, 0.5, 0.15); tone(659, 0.02, 0.5, 0.15, 'sine', 0.15); tone(784, 0.02, 0.9, 0.15, 'sine', 0.3); },
