@@ -38,7 +38,7 @@ const Game = (() => {
       stats: { correct: 0, wrong: 0 }, events: [],
       report: { state: 'idle', t: 0, dur: 0, room: null, type: null, menuOpen: false },
     });
-    G.entities = cfg.ents.map(id => ({ id, stage: 0, moveT: rand(cfg.move) + 8, away: 0, entryT: 0, tellT: 0, leaveT: 0 }));
+    G.entities = cfg.ents.map(id => ({ id, stage: 0, moveT: rand(cfg.move) + 8, away: 0, entryT: 0, tellT: 0, leaveT: 0, seenEntry: false }));
   }
 
   function switchCam(id) {
@@ -87,7 +87,6 @@ const Game = (() => {
       room, kind, x: 150 + Math.random() * 980, y: kind === 'face' ? 150 : 520 + Math.random() * 80,
       life: 2.5 + Math.random() * 2.5, max: 5, alpha: 0.12 + Math.random() * 0.2 + progress() * 0.1,
     });
-    if (room === G.cam && G.monitor) emit('whisper');
   }
 
   // ---- reporting ----
@@ -164,10 +163,13 @@ const Game = (() => {
     // fake things at your door/vent: only visible under the flashlight, but they sound like the real thing
     if (cfg.halluc > 0 && Math.random() < cfg.halluc * 0.02 * (1 + 2 * progress()) * dt) {
       const kind = Math.random() < 0.5 ? 'door' : 'vent';
-      G.entryFake.push({ kind, life: 2.5 + Math.random() * 1.5, tellT: 0 });
+      G.entryFake.push({ kind, life: 2.5 + Math.random() * 1.5, tellT: 0, seen: false });
     }
     for (const f of G.entryFake) {
-      f.life -= dt; f.tellT -= dt;
+      f.life -= dt;
+      if (G.flash[f.kind] && !G[f.kind]) f.seen = true;             // sounds only start once you have seen it
+      if (!f.seen) continue;
+      f.tellT -= dt;
       if (f.tellT <= 0) { emit('tell', f.kind === 'vent' ? 'scratch' : (Math.random() < 0.5 ? 'knock' : 'breath')); f.tellT = 0.9; }
     }
     G.entryFake = G.entryFake.filter(f => f.life > 0);
@@ -185,11 +187,14 @@ const Game = (() => {
       const def = ENTITIES[e.id], len = def.path.length;
       if (e.away > 0) { e.away -= dt; continue; }
       if (atEntryStage(e)) {
-        e.tellT -= dt;
-        if (e.tellT <= 0) { emit('tell', def.tell); e.tellT = 0.9; }
+        if (G.flash[def.entry] && !G[def.entry]) e.seenEntry = true;  // the flashlight is the only warning
+        if (e.seenEntry) {
+          e.tellT -= dt;
+          if (e.tellT <= 0) { emit('tell', def.tell); e.tellT = 0.9; }
+        }
         if (entryBlocked(def.entry)) {
           e.leaveT += dt;
-          if (e.leaveT >= 2.5) { e.stage = 0; e.away = rand([8, 12]); e.moveT = rand(cfg.move); e.leaveT = 0; e.entryT = 0; emit('block'); }
+          if (e.leaveT >= 2.5) { e.stage = 0; e.away = rand([8, 12]); e.moveT = rand(cfg.move); e.leaveT = 0; e.entryT = 0; e.seenEntry = false; }
         } else {
           e.leaveT = 0; e.entryT += dt;
           if (e.entryT >= cfg.kill) return lose(`${def.name.toUpperCase()} GOT IN`);
@@ -202,7 +207,7 @@ const Game = (() => {
       e.moveT -= dt * (1 + G.overload / 150) * (1 + 0.4 * progress());
       if (e.moveT <= 0) {
         e.stage++; e.moveT = rand(cfg.move);
-        if (e.stage >= len) { e.entryT = 0; e.leaveT = 0; e.tellT = 0; }
+        if (e.stage >= len) { e.entryT = 0; e.leaveT = 0; e.tellT = 0; e.seenEntry = false; }
       }
     }
 

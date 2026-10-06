@@ -79,9 +79,9 @@ Semi-transparent figures, faces in windows, flickering shapes, whispers. They do
 ## Defense (the room you are in)
 Inspired by FNAF 4: audio tells and fast reactions.
 - Entry points: **door** and **vents** (window possible later).
-- Each entity approaches a specific entry point with an audio tell (breathing, scratching, knocking, vent rattle).
+- **No unearned audio.** Nothing at the door or vent makes a sound until you have *seen* it with the flashlight. After you see it, it starts its tell (knocking, scratching, breathing). Entities leaving, hallucinations appearing, and fakes at the door/vent are all silent until you look. The only warning is what you spot on the cameras (an entity in the room next to your office) and checking with the flashlight.
 - Block it with the right action (close door, seal vent) **before it arrives**. Wasting a block costs power.
-- **Flashlights:** the open doorway and vent are pitch black. Hold the flashlight on one (Q door, E vent) to see what is there; it drains power and cannot be used while the monitor is up or that entry is shut. Audio tells still play, but on later nights **fake tells and faint figures** appear at the door/vent too (hallucinations), so a knock does not always mean something is there. Real entities are solid; fakes are semi-transparent and flicker.
+- **Flashlights:** the open doorway and vent are pitch black. Hold the flashlight on one (Q door, E vent) to see what is there; it drains power and cannot be used while the monitor is up or that entry is shut. On later nights **faint fake figures** appear at the door/vent too (hallucinations); once you light a fake it makes the same sounds as the real thing, so solidity is the tell. Real entities are solid; fakes are semi-transparent and flicker.
 - **No camping:** the door and vent accumulate **strain** while shut (about 8s from empty). At 100 they **jam open for 10s** and can't be closed. Strain drains slowly while they are open, so repeatedly toggling still adds up. You also can't use them while the monitor is up.
 - Watching an entry point means not watching cameras.
 
