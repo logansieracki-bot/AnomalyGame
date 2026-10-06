@@ -22,3 +22,6 @@ Debug URL params: `?night=3` skips the menu, `?speed=5` runs the clock faster. `
 
 ## Swapping in real photos
 `js/scene.js` draws each room from a fixed layout plus its active anomalies. To use photos, replace `drawRoom` with a baseline `drawImage` and per-anomaly overlay/variant images; the anomaly data model (`type`, `target`, room) stays the same.
+
+## Deploying
+`.github/workflows/pages.yml` publishes the game to GitHub Pages on every push to `main`. One-time setup: repo **Settings > Pages > Build and deployment > Source: GitHub Actions**. The site will be at `https://<user>.github.io/AnomalyGame/`.
