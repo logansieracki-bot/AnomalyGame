@@ -1,0 +1,57 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+body { display: flex; align-items: center; justify-content: center; font-family: "Courier New", monospace; color: #cfe8cf; }
+#app { position: relative; width: min(100vw, 177.78vh); aspect-ratio: 16 / 9; container-type: size; background: #050605; user-select: none; }
+#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hidden { display: none !important; }
+#hud { position: absolute; inset: 0; font-size: 1.15cqw; pointer-events: none; text-shadow: 0 0 .4cqw #000; }
+#hud button, #hud #reportMenu { pointer-events: auto; }
+
+button { font: inherit; color: #d6efd6; background: rgba(110,140,110,.55); border: .15cqw solid rgba(190,230,190,.35); padding: .5cqw .9cqw; cursor: pointer; }
+button:hover:not(:disabled) { background: rgba(140,180,140,.7); }
+button:disabled { opacity: .45; cursor: default; }
+button.active { background: rgba(190,230,190,.85); color: #0a140a; }
+
+#camLabel { position: absolute; left: 2cqw; top: 2cqw; font-size: 1.8cqw; letter-spacing: .1cqw; }
+#camLabel::after { content: " \25CF REC"; color: #d33; animation: blink 1.2s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+#topRight { position: absolute; right: 2cqw; top: 2cqw; text-align: right; }
+#clock { font-size: 3cqw; }
+#nightLabel { font-size: 1.3cqw; opacity: .8; }
+#bars { position: absolute; left: 2cqw; top: 6cqw; width: 22cqw; }
+.bar { display: flex; align-items: center; gap: .6cqw; margin-bottom: .6cqw; }
+.bar span { width: 8cqw; font-size: 1cqw; opacity: .85; }
+.bar .track { flex: 1; height: 1cqw; background: rgba(0,0,0,.6); border: .1cqw solid rgba(190,230,190,.4); }
+.bar .track i { display: block; height: 100%; width: 100%; background: #8fcf8f; }
+#loadFill { background: #cf8f4f; width: 0; }
+.bar b { width: 4cqw; text-align: right; font-weight: normal; font-size: 1cqw; }
+
+#reportPanel { position: absolute; left: 2cqw; bottom: 3cqw; width: 22cqw; }
+#reportBtn { width: 100%; padding: .9cqw; font-size: 1.5cqw; }
+#reportMenu { background: rgba(10,20,10,.92); border: .15cqw solid rgba(190,230,190,.35); margin-bottom: .5cqw; position: absolute; bottom: 100%; left: 0; width: 100%; }
+#reportMenu h4 { margin: 0; padding: .4cqw .8cqw; font-size: 1cqw; background: rgba(110,140,110,.35); letter-spacing: .1cqw; }
+#reportMenu button { display: block; width: 100%; text-align: left; border: none; border-bottom: .1cqw solid rgba(190,230,190,.15); background: transparent; }
+#reportMenu button:hover { background: rgba(140,180,140,.5); }
+#reportStatus { margin-top: .5cqw; min-height: 2cqw; font-size: 1.05cqw; }
+
+#map { position: absolute; right: 2cqw; bottom: 3cqw; width: 22cqw; display: grid; grid-template-columns: repeat(3, 1fr); gap: .5cqw; }
+#map button { height: 4.2cqw; font-size: .95cqw; line-height: 1.1; padding: .2cqw; position: relative; white-space: pre-line; }
+#map .you { grid-column: 2; background: rgba(60,60,60,.6); color: #aaa; cursor: default; }
+#map button.alert::after { content: ""; position: absolute; top: .3cqw; right: .3cqw; width: .8cqw; height: .8cqw; background: #d33; border-radius: 50%; }
+
+#monitorBtn { position: absolute; left: 50%; bottom: 2cqw; transform: translateX(-50%); font-size: 1.3cqw; padding: .7cqw 2cqw; }
+#defense { position: absolute; left: 50%; bottom: 7cqw; transform: translateX(-50%); display: flex; gap: 2cqw; }
+#defense button { font-size: 1.6cqw; padding: 1cqw 2.5cqw; }
+#toast { position: absolute; left: 50%; top: 14cqw; transform: translateX(-50%); font-size: 1.6cqw; opacity: 0; transition: opacity .25s; text-align: center; padding: .5cqw 1.5cqw; background: rgba(0,0,0,.6); }
+#toast.show { opacity: 1; }
+#toast.good { color: #9fe89f; }
+#toast.bad { color: #ff8f8f; }
+
+#screen { position: absolute; inset: 0; background: rgba(0,0,0,.88); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 3cqw; }
+#screen h1 { font-size: 5cqw; margin: 0 0 1cqw; letter-spacing: .5cqw; font-weight: normal; }
+#screen .sub { font-size: 1.5cqw; margin: 0 0 2.5cqw; opacity: .85; max-width: 60cqw; }
+#screen .help { text-align: left; font-size: 1.1cqw; max-width: 56cqw; opacity: .8; line-height: 1.6; margin: 2.5cqw 0 0; padding-left: 1.5cqw; }
+#nightButtons { display: flex; gap: 1cqw; flex-wrap: wrap; justify-content: center; }
+#nightButtons button { font-size: 1.6cqw; padding: 1cqw 1.8cqw; }
+#screen .stats { font-size: 1.3cqw; line-height: 1.8; margin-bottom: 2cqw; }
+#screen.lose h1 { color: #e66; }

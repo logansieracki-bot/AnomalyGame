@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Anomaly Shift</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="view" width="1280" height="720"></canvas>
+
+  <div id="hud" class="hidden">
+    <div id="camLabel"></div>
+    <div id="topRight"><div id="clock">12 AM</div><div id="nightLabel"></div></div>
+    <div id="bars">
+      <div class="bar"><span>POWER</span><div class="track"><i id="powerFill"></i></div><b id="powerNum"></b></div>
+      <div class="bar"><span>OVERLOAD</span><div class="track"><i id="loadFill"></i></div></div>
+    </div>
+
+    <div id="reportPanel">
+      <button id="reportBtn">REPORT [R]</button>
+      <div id="reportMenu" class="hidden"></div>
+      <div id="reportStatus"></div>
+    </div>
+
+    <div id="map"></div>
+
+    <button id="monitorBtn">LOWER MONITOR [SPACE]</button>
+    <div id="defense" class="hidden">
+      <button id="doorBtn">DOOR [A]</button>
+      <button id="ventBtn">VENT [D]</button>
+    </div>
+    <div id="toast"></div>
+  </div>
+
+  <div id="screen">
+    <h1>ANOMALY SHIFT</h1>
+    <p class="sub">12 AM - 6 AM. Watch the cameras. Report what is wrong. Don't let anything in.</p>
+    <div id="nightButtons"></div>
+    <ul class="help">
+      <li><b>Cameras:</b> click the map (or keys 1-9). Only one camera at a time.</li>
+      <li><b>Report:</b> select the room's camera, press REPORT, pick what is wrong. It takes a few seconds, then there is a cooldown.</li>
+      <li><b>Defend:</b> lower the monitor (SPACE), then close the door (A) or vent (D) when you hear something arrive.</li>
+      <li><b>Not everything is real.</b> Semi-transparent things are not reportable.</li>
+      <li>You lose if power runs out, overload fills, or something reaches you unblocked.</li>
+    </ul>
+  </div>
+</div>
+<script src="js/data.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
