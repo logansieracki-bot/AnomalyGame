@@ -1,36 +1,38 @@
-// Audio engine.
-//
-// Real recordings are loaded from assets/audio/manifest.json (see assets/audio/README.md).
-// Web Audio is used only for MIXING: loops, panning, filtering, reverb, ducking.
-// Anything missing from the manifest falls back to a quiet synthesized stand-in so the game
-// is always playable, but the intent is that every stand-in gets replaced by a real recording.
+// Audio engine. NOTHING here is synthesized: every sound is a real recording loaded from
+// assets/audio/manifest.json (see assets/audio/README.md). If a file is missing that sound is simply
+// silent. Web Audio is used only to MIX: loops, panning, filtering, ducking, optional wall reverb.
 //
 // Signal flow:
-//   beds (camera / rooms / office) -> ambFilter -> ambDuck ----------------\
-//   phantoms (lowpass + pan + wall reverb) -> phantomBus ------------------+-> master -> compressor -> out
-//   tells / body / impacts / ui -> own buses -------------------------------/
+//   beds (camera / rooms / office) -> ambFilter -> ambDuck -> ambLevel ---\
+//   phantoms (lowpass + pan [+ wall reverb if an IR file exists]) --------+-> master -> compressor -> out
+//   tells / body / impacts / ui -> their own buses -----------------------/
 const Sfx = (() => {
   const BASE = 'assets/audio/';
-  let ctx = null, master, comp, ambFilter, ambDuck, convolver;
-  const bus = {};                       // named gain nodes
+  let ctx = null, master, comp, ambFilter, ambDuck, ambLevel, convolver = null;
+  const bus = {};
   const buf = {};                       // 'group.key' -> [AudioBuffer]
-  const bag = {};                       // 'group.key' -> shuffle bag of indexes
-  const status = {};                    // 'group.key' -> { want: n, loaded: n }
-  let noise = null;
-  const beds = { cam: [], office: [], rooms: {} };   // looping sources (for pitch/spool effects)
+  const bag = {};                       // shuffle bags so variants don't repeat
+  const status = {};                    // 'group.key' -> { want, loaded }
+  let trims = {};                       // optional per-key gain trims from the manifest ("gains")
+  const beds = { sources: [], rooms: {} };
   const roomGain = {};
   let loadedPromise = null;
 
   const S = {
-    volume: 0.8, reduced: false,
+    volume: 0.8, ambience: 0.5, reduced: false,
     beatT: 0, breathT: 2, wasHolding: false,
     phantomT: 12, deadAirT: 60, glitchT: 30, creakT: 15, deadUntil: 0,
     dying: false,
   };
-  try { S.volume = parseFloat(localStorage.getItem('as_vol') ?? S.volume); S.reduced = localStorage.getItem('as_reduced') === '1'; } catch (e) {}
+  try {
+    const v = parseFloat(localStorage.getItem('as_vol')); if (!isNaN(v)) S.volume = v;
+    const a = parseFloat(localStorage.getItem('as_amb')); if (!isNaN(a)) S.ambience = a;
+    S.reduced = localStorage.getItem('as_reduced') === '1';
+  } catch (e) {}
 
   const rand = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const trim = (key, dflt = 1) => trims[key] ?? dflt;
 
   // ---------- setup ----------
   function init() {
@@ -41,32 +43,19 @@ const Sfx = (() => {
     comp = ctx.createDynamicsCompressor();             // acts as a limiter so nothing clips
     comp.threshold.value = -14; comp.knee.value = 6; comp.ratio.value = 12; comp.attack.value = 0.003; comp.release.value = 0.25;
     master = ctx.createGain(); master.connect(comp); comp.connect(ctx.destination);
-    for (const n of ['cam', 'office', 'phantom', 'tell', 'body', 'impact', 'ui']) { bus[n] = ctx.createGain(); }
+    for (const n of ['cam', 'office', 'phantom', 'tell', 'body', 'impact', 'ui']) bus[n] = ctx.createGain();
     ambFilter = ctx.createBiquadFilter(); ambFilter.type = 'lowpass'; ambFilter.frequency.value = 16000;
-    ambDuck = ctx.createGain();
-    bus.cam.connect(ambFilter); bus.office.connect(ambFilter); ambFilter.connect(ambDuck); ambDuck.connect(master);
+    ambDuck = ctx.createGain(); ambLevel = ctx.createGain();
+    bus.cam.connect(ambFilter); bus.office.connect(ambFilter); ambFilter.connect(ambDuck); ambDuck.connect(ambLevel); ambLevel.connect(master);
     for (const n of ['phantom', 'tell', 'body', 'impact', 'ui']) bus[n].connect(master);
     bus.cam.gain.value = 1; bus.office.gain.value = 0.3;
     applyMix();
-
-    const len = ctx.sampleRate * 2;
-    noise = ctx.createBuffer(1, len, ctx.sampleRate);
-    const d = noise.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-
-    convolver = ctx.createConvolver();                  // "through a wall" reverb for phantoms; replaced by an IR file if provided
-    convolver.buffer = makeIR(1.6);
-    convolver.connect(bus.phantom);
-
     loadedPromise = load().then(startBeds);
-  }
-  function makeIR(sec) {                                // plain decaying noise: reverb DSP, not a sound effect
-    const n = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(2, n, ctx.sampleRate);
-    for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); }
-    return b;
   }
   function applyMix() {
     if (!ctx) return;
     master.gain.value = S.volume;
+    ambLevel.gain.value = S.ambience;
     bus.impact.gain.value = S.reduced ? 0.4 : 1;
   }
 
@@ -82,7 +71,8 @@ const Sfx = (() => {
   }
   async function load() {
     let manifest = {};
-    try { manifest = await (await fetch(BASE + 'manifest.json')).json(); } catch (e) { return; }   // no manifest / file:// -> synth fallbacks only
+    try { manifest = await (await fetch(BASE + 'manifest.json')).json(); } catch (e) { return; }   // no manifest / file:// -> silent
+    trims = manifest.gains || {}; delete manifest.gains;
     const entries = flatten(manifest, '', {});
     await Promise.all(Object.entries(entries).map(async ([key, paths]) => {
       status[key] = { want: paths.length, loaded: 0 };
@@ -91,14 +81,15 @@ const Sfx = (() => {
           const r = await fetch(BASE + p); if (!r.ok) continue;
           const b = await ctx.decodeAudioData(await r.arrayBuffer());
           (buf[key] ||= []).push(b); status[key].loaded++;
-        } catch (e) { /* missing or undecodable: skip silently */ }
+        } catch (e) { /* missing or undecodable: skip */ }
       }
     }));
+    if (has('ir')) { convolver = ctx.createConvolver(); convolver.buffer = buf['ir'][0]; convolver.connect(bus.phantom); }
   }
   const has = key => !!(buf[key] && buf[key].length);
-  function pick(key) {                                  // shuffle bag: no repeats until all have played
+  function pick(key) {                                  // shuffle bag: no repeats until all variants have played
     const list = buf[key]; if (!list || !list.length) return null;
-    let b = bag[key]; if (!b || !b.length) { b = bag[key] = list.map((_, i) => i).sort(() => Math.random() - 0.5); }
+    let b = bag[key]; if (!b || !b.length) b = bag[key] = list.map((_, i) => i).sort(() => Math.random() - 0.5);
     return list[b.pop()];
   }
 
@@ -108,82 +99,44 @@ const Sfx = (() => {
     const g = ctx.createGain(); g.gain.value = gain; s.connect(g); g.connect(out); s.start(0, Math.random() * buffer.duration);
     return { s, g };
   }
+  // Plays one recording. rate/stretch change speed; lp low-passes; pan is -1..1.
   function play(key, { out = bus.ui, vol = 1, pan = 0, rate = 1, lp = 0, delay = 0 } = {}) {
+    if (!ctx) return null;
     const b = pick(key); if (!b) return null;
-    const t = ctx.currentTime + delay;
     const s = ctx.createBufferSource(); s.buffer = b; s.playbackRate.value = rate;
     let node = s;
-    const g = ctx.createGain(); g.gain.value = vol; node.connect(g); node = g;
+    const g = ctx.createGain(); g.gain.value = vol * trim(key); node.connect(g); node = g;
     if (lp) { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; node.connect(f); node = f; }
     if (pan && ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = pan; node.connect(p); node = p; }
-    node.connect(out); s.start(t);
+    node.connect(out); s.start(ctx.currentTime + delay);
     return s;
-  }
-  function env(g, t, a, d, vol) {
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t + a);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
-  }
-  // stand-ins used only when no recording is available
-  function burst(type, freq, q, a, d, vol, out, delay = 0, pan = 0) {
-    const t = ctx.currentTime + delay;
-    const s = ctx.createBufferSource(); s.buffer = noise; s.loop = true;
-    const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
-    const g = ctx.createGain(); env(g, t, a, d, vol);
-    s.connect(f); f.connect(g);
-    let n = g; if (pan && ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = pan; g.connect(p); n = p; }
-    n.connect(out); s.start(t, Math.random()); s.stop(t + a + d + 0.05);
-  }
-  function tone(freq, a, d, vol, out, type = 'sine', delay = 0, pan = 0) {
-    const t = ctx.currentTime + delay;
-    const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq;
-    const g = ctx.createGain(); env(g, t, a, d, vol); o.connect(g);
-    let n = g; if (pan && ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = pan; g.connect(p); n = p; }
-    n.connect(out); o.start(t); o.stop(t + a + d + 0.05);
   }
 
   // ---------- ambience beds ----------
   function startBeds() {
     if (!ctx) return;
-    if (has('cam.base')) beds.cam.push(loop(pick('cam.base'), bus.cam, 0.8));
-    else { // stand-in: tape hiss + mains hum
-      const hiss = loop(noise, bus.cam, 0.025); const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 3500;
-      hiss.g.disconnect(); hiss.g.connect(f); f.connect(bus.cam); beds.cam.push(hiss);
-      const o = ctx.createOscillator(); o.frequency.value = 60; const g = ctx.createGain(); g.gain.value = 0.02; o.connect(g); g.connect(bus.cam); o.start();
-    }
+    if (has('cam.base')) beds.sources.push(loop(pick('cam.base'), bus.cam, 0.5 * trim('cam.base')).s);
     for (const r of ROOMS) {
       const key = 'rooms.' + r.id;
       const g = ctx.createGain(); g.gain.value = 0; g.connect(bus.cam); roomGain[r.id] = g;
-      if (has(key)) beds.rooms[r.id] = loop(pick(key), g, 0.7);
+      if (has(key)) beds.sources.push(loop(pick(key), g, 0.5 * trim(key)).s);
     }
-    if (has('office.base')) beds.office.push(loop(pick('office.base'), bus.office, 0.8));
-    else { // stand-in: low air-handling rumble
-      const rumble = loop(noise, bus.office, 0.18); const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220;
-      rumble.g.disconnect(); rumble.g.connect(f); f.connect(bus.office); beds.office.push(rumble);
-    }
+    if (has('office.base')) beds.sources.push(loop(pick('office.base'), bus.office, 0.5 * trim('office.base')).s);
     if (has('body.tinnitus')) { const t = loop(pick('body.tinnitus'), bus.body, 0); bus.tinn = t.g; }
-    else { const o = ctx.createOscillator(); o.frequency.value = 7200; const g = ctx.createGain(); g.gain.value = 0; o.connect(g); g.connect(bus.body); o.start(); bus.tinn = g; }
   }
-  function allBedSources() { return [...beds.cam, ...beds.office, ...Object.values(beds.rooms)].map(b => b.s); }
 
   // ---------- phantoms: far, muffled, through walls, never a knock/scratch/breath ----------
   function phantom() {
-    if (!ctx) return;
-    const pan = rand(-0.55, 0.55) * (Math.random() < 0.5 ? 1 : -1) * 0.9;
-    const lp = rand(700, 1800);
-    if (has('phantoms')) {
-      const b = pick('phantoms'), s = ctx.createBufferSource(); s.buffer = b; s.playbackRate.value = rand(0.92, 1.05);
-      const g = ctx.createGain(); g.gain.value = rand(0.35, 0.8);
-      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp;
-      const p = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain(); if (p.pan) p.pan.value = pan;
-      const dry = ctx.createGain(); dry.gain.value = 0.35; const wet = ctx.createGain(); wet.gain.value = 0.9;
-      s.connect(g); g.connect(f); f.connect(p); p.connect(dry); dry.connect(bus.phantom); p.connect(wet); wet.connect(convolver);
-      s.start();
-    } else {                                            // stand-in: a distant dull thump or creak
-      const out = ctx.createGain(); out.gain.value = 1; out.connect(convolver); out.connect(bus.phantom);
-      if (Math.random() < 0.5) tone(rand(55, 80), 0.03, 0.35, 0.12, out, 'sine', 0, pan);
-      else burst('bandpass', rand(300, 500), 6, 0.4, 0.5, 0.04, out, 0, pan);
-    }
+    if (!ctx || !has('phantoms')) return;
+    const pan = rand(0.15, 0.55) * (Math.random() < 0.5 ? 1 : -1);
+    const s = ctx.createBufferSource(); s.buffer = pick('phantoms'); s.playbackRate.value = rand(0.92, 1.05);
+    const g = ctx.createGain(); g.gain.value = rand(0.35, 0.8) * trim('phantoms');
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = rand(700, 1800);
+    const p = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain(); if (p.pan) p.pan.value = pan;
+    s.connect(g); g.connect(f); f.connect(p);
+    const dry = ctx.createGain(); dry.gain.value = convolver ? 0.35 : 1; p.connect(dry); dry.connect(bus.phantom);
+    if (convolver) { const wet = ctx.createGain(); wet.gain.value = 0.9; p.connect(wet); wet.connect(convolver); }
+    s.start();
   }
   function deadAir() {                                  // sudden silence is scarier than noise
     if (!ctx || S.dying) return;
@@ -199,20 +152,11 @@ const Sfx = (() => {
   }
 
   // ---------- body: heartbeat, breathing, tinnitus ----------
-  function beat(vol) {
-    if (has('body.heartbeat')) play('body.heartbeat', { out: bus.body, vol });
-    else { tone(52, 0.01, 0.16, vol * 0.5, bus.body); tone(46, 0.01, 0.2, vol * 0.4, bus.body, 'sine', 0.17); }
-  }
-  function breathe(vol) {
-    if (has('body.breath')) play('body.breath', { out: bus.body, vol, rate: rand(0.95, 1.08) });
-    else burst('lowpass', 500, 1, 0.5, 0.7, vol * 0.25, bus.body);
-  }
-  function gasp(vol = 0.7) {
-    if (has('body.gasp')) play('body.gasp', { out: bus.body, vol });
-    else burst('bandpass', 900, 0.7, 0.05, 0.4, vol * 0.3, bus.body);
-  }
+  const beat = vol => play('body.heartbeat', { out: bus.body, vol });
+  const breathe = vol => play('body.breath', { out: bus.body, vol, rate: rand(0.95, 1.08) });
+  const gasp = (vol = 0.7) => play('body.gasp', { out: bus.body, vol });
 
-  // ---------- per-frame driver (called by ui.js, or the sound test page) ----------
+  // ---------- per-frame driver (ui.js, or the sound test page) ----------
   // st: { monitor, cam, fear, overload, night, progress, running, holding }
   function frame(dt, st) {
     if (!ctx || S.dying) return;
@@ -221,13 +165,12 @@ const Sfx = (() => {
     bus.office.gain.setTargetAtTime(st.monitor ? 0.3 : 1, t, 0.2);
     for (const id in roomGain) roomGain[id].gain.setTargetAtTime(st.monitor && id === st.cam ? 1 : 0, t, 0.2);
     ambFilter.frequency.setTargetAtTime(16000 - fear * 12500, t, 0.3);            // tunnel hearing
-    for (const s of allBedSources()) s.detune.setTargetAtTime(-fear * 120, t, 0.5);
+    for (const s of beds.sources) s.detune.setTargetAtTime(-fear * 120, t, 0.5);
     if (bus.tinn) bus.tinn.gain.setTargetAtTime(fear * 0.02, t, 0.8);
     if (!st.running) return;
 
     const night = st.night || 1, prog = st.progress || 0, pace = 1 + night * 0.15 + prog;
-    // heartbeat + breathing follow fear
-    if (fear > 0.12) {
+    if (fear > 0.12) {                                                              // heartbeat follows fear
       S.beatT -= dt;
       if (S.beatT <= 0) { beat(0.15 + 0.85 * fear); S.beatT = 60 / (55 + 95 * fear); }
     }
@@ -236,22 +179,17 @@ const Sfx = (() => {
       if (S.wasHolding) { gasp(0.4 + 0.5 * fear); S.wasHolding = false; S.breathT = 2; }
       if (fear > 0.3) { S.breathT -= dt; if (S.breathT <= 0) { breathe(0.2 + 0.6 * fear); S.breathT = 3.4 - 2.6 * fear; } }
     }
-    // random world: phantoms, dead air, tape glitches, house creaks
     S.phantomT -= dt; if (S.phantomT <= 0) { phantom(); S.phantomT = rand(14, 32) / pace; }
     S.deadAirT -= dt; if (S.deadAirT <= 0) { deadAir(); S.deadAirT = rand(45, 90) / (1 + night * 0.1); }
     S.glitchT -= dt; if (S.glitchT <= 0) { S.glitchT = rand(25, 60); if (st.monitor) glitch(); }
     S.creakT -= dt; if (S.creakT <= 0) { S.creakT = rand(10, 25); if (!st.monitor) officeOneShot(); }
   }
-  function glitch() {
+  function glitch() {                                                               // brief tape dropout, synced with a visual glitch
     if (!ctx) return;
-    if (has('cam.dropout')) play('cam.dropout', { out: bus.cam, vol: 0.7 });
-    else burst('highpass', 2500, 0.5, 0.01, 0.12, 0.08, bus.cam);
+    play('cam.dropout', { out: bus.cam, vol: 0.7 });
     if (api.onGlitch) api.onGlitch();
   }
-  function officeOneShot() {
-    if (has('office.oneshot')) play('office.oneshot', { out: bus.office, vol: rand(0.4, 0.9), pan: rand(-0.8, 0.8) });
-    else tone(rand(70, 110), 0.02, 0.2, 0.08, bus.office, 'sine', 0, rand(-0.8, 0.8));
-  }
+  const officeOneShot = () => play('office.oneshot', { out: bus.office, vol: rand(0.4, 0.9), pan: rand(-0.8, 0.8) });
 
   // ---------- events ----------
   function spike(amount) {
@@ -263,16 +201,10 @@ const Sfx = (() => {
   function sight() {                                                               // the room holds its breath
     if (!ctx) return;
     duck(0.2, 1.6);
-    if (has('impacts.sight')) play('impacts.sight', { out: bus.impact, vol: 0.7 });
-    else tone(38, 0.05, 0.9, 0.35, bus.impact, 'sine');
+    play('impacts.sight', { out: bus.impact, vol: 0.7 });
   }
   function tell(kind, entry) {                                                     // close, dry, physical (opposite of phantoms)
-    if (!ctx) return;
-    const pan = entry === 'vent' ? 0.6 : -0.6;
-    if (has('tell.' + kind)) { play('tell.' + kind, { out: bus.tell, vol: 0.9, pan }); return; }
-    if (kind === 'knock') { tone(90, 0.003, 0.14, 0.7, bus.tell, 'sine', 0, pan); tone(85, 0.003, 0.14, 0.6, bus.tell, 'sine', 0.22, pan); }
-    else if (kind === 'scratch') for (let i = 0; i < 4; i++) burst('bandpass', 3200 + i * 300, 4, 0.005, 0.07, 0.25, bus.tell, i * 0.09, pan);
-    else burst('lowpass', 500, 1, 0.5, 0.7, 0.3, bus.tell, 0, pan);
+    play('tell.' + kind, { out: bus.tell, vol: 0.9, pan: entry === 'vent' ? 0.6 : -0.6 });
   }
 
   // Death sequences: silence, then one dry physical event. Returns ms until the end screen should appear.
@@ -281,36 +213,28 @@ const Sfx = (() => {
     S.dying = true;
     const t = ctx.currentTime;
     for (const g of [ambDuck, bus.phantom, bus.body]) { g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0, t, 0.02); }
-    const impact = key => {
-      if (has('impacts.' + key)) play('impacts.' + key, { out: bus.impact, vol: 1 });
-      else if (key === 'vent') { burst('bandpass', 1800, 2, 0.01, 0.5, 0.5, bus.impact); tone(55, 0.005, 0.4, 0.6, bus.impact); }
-      else { burst('lowpass', 600, 1, 0.005, 0.3, 0.9, bus.impact); tone(48, 0.005, 0.5, 0.9, bus.impact); }
-    };
-    const after = (sec, bodyAfter = true) => {                                     // tinnitus, a close breath, heart fading out
+    const after = () => {                                                          // tinnitus, a close breath, heart gone
       const tt = ctx.currentTime;
       if (bus.tinn) { bus.tinn.gain.cancelScheduledValues(tt); bus.tinn.gain.setTargetAtTime(0.08, tt, 0.1); }
-      if (bodyAfter) { bus.body.gain.cancelScheduledValues(tt); bus.body.gain.setValueAtTime(1, tt); setTimeout(() => gasp(0.6), 600); }
+      bus.body.gain.cancelScheduledValues(tt); bus.body.gain.setValueAtTime(1, tt); setTimeout(() => gasp(0.6), 600);
     };
     if (cause === 'door' || cause === 'vent') {
-      setTimeout(() => { impact(cause); after(); }, 900);
+      setTimeout(() => { play('impacts.' + cause, { out: bus.impact, vol: 1 }); after(); }, 900);
       return 2600;
     }
     if (cause === 'overload') {                                                    // every layer swells into a roar, hard cut
       const tt = t + 0.4;
       ambDuck.gain.setTargetAtTime(2.2, tt, 0.6); bus.phantom.gain.setTargetAtTime(2.5, tt, 0.4);
+      setTimeout(() => play('impacts.overload', { out: bus.impact, vol: 1 }), 400);
       for (let i = 0; i < 8; i++) setTimeout(phantom, 400 + i * 220);
       setTimeout(() => { for (const g of [ambDuck, bus.phantom]) { g.gain.cancelScheduledValues(ctx.currentTime); g.gain.setValueAtTime(0, ctx.currentTime); } after(); }, 2800);
       return 4200;
     }
     // power: thunk, everything spools down, long quiet, something approaches
-    if (has('impacts.power_down')) play('impacts.power_down', { out: bus.impact, vol: 1 });
-    else { burst('lowpass', 400, 1, 0.005, 0.25, 0.7, bus.impact); tone(60, 0.005, 0.4, 0.6, bus.impact); }
-    for (const s of allBedSources()) s.playbackRate.setTargetAtTime(0.1, t, 0.8);
-    setTimeout(() => {
-      if (has('impacts.power_approach')) play('impacts.power_approach', { out: bus.impact, vol: 0.8 });
-      else for (let i = 0; i < 6; i++) tone(70, 0.01, 0.12, 0.25, bus.impact, 'sine', i * (0.9 + i * 0.15));
-    }, 3500);
-    setTimeout(() => { impact('door'); after(); }, 8200);
+    play('impacts.power_down', { out: bus.impact, vol: 1 });
+    for (const s of beds.sources) s.playbackRate.setTargetAtTime(0.1, t, 0.8);
+    setTimeout(() => play('impacts.power_approach', { out: bus.impact, vol: 0.8 }), 3500);
+    setTimeout(() => { play('impacts.door', { out: bus.impact, vol: 1 }); after(); }, 8200);
     return 9800;
   }
 
@@ -321,31 +245,34 @@ const Sfx = (() => {
     if (!ctx) return;
     const t = ctx.currentTime;
     for (const g of [ambDuck, bus.phantom, bus.body]) { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(1, t); }
-    for (const s of allBedSources()) { s.playbackRate.cancelScheduledValues(t); s.playbackRate.setValueAtTime(1, t); }
+    for (const s of beds.sources) { s.playbackRate.cancelScheduledValues(t); s.playbackRate.setValueAtTime(1, t); }
     if (bus.tinn) { bus.tinn.gain.cancelScheduledValues(t); bus.tinn.gain.setValueAtTime(0, t); }
   }
 
-  // simple UI feedback sounds (these fit the VHS interface, so stand-ins are fine)
-  const ui = {
-    cam() { if (has('ui.cam')) play('ui.cam', { out: bus.ui, vol: 0.6 }); else burst('bandpass', 2500, 0.8, 0.01, 0.18, 0.1, bus.ui); },
-    monitor(up) { if (has('ui.monitor')) play('ui.monitor', { out: bus.ui, vol: 0.6 }); else tone(up ? 440 : 220, 0.01, 0.12, 0.07, bus.ui, 'square'); },
-    click() { if (has('ui.click')) play('ui.click', { out: bus.ui, vol: 0.5 }); else tone(880, 0.005, 0.05, 0.05, bus.ui, 'square'); },
-    accept() { if (has('ui.accept')) play('ui.accept', { out: bus.ui, vol: 0.7 }); else { tone(660, 0.01, 0.12, 0.09, bus.ui); tone(990, 0.01, 0.2, 0.09, bus.ui, 'sine', 0.1); } },
-    reject() { if (has('ui.reject')) play('ui.reject', { out: bus.ui, vol: 0.7 }); else tone(140, 0.01, 0.35, 0.12, bus.ui, 'sawtooth'); },
-    block() { if (has('ui.block')) play('ui.block', { out: bus.impact, vol: 0.8 }); else { burst('lowpass', 300, 1, 0.005, 0.25, 0.4, bus.impact); tone(70, 0.005, 0.3, 0.25, bus.impact); } },
-    jam() { if (has('ui.jam')) play('ui.jam', { out: bus.impact, vol: 0.8 }); else { burst('lowpass', 400, 1, 0.005, 0.5, 0.5, bus.impact); tone(45, 0.005, 0.6, 0.4, bus.impact, 'sawtooth'); } },
-    win() { if (has('ui.win')) play('ui.win', { out: bus.ui, vol: 0.8 }); else { tone(523, 0.02, 0.5, 0.13, bus.ui); tone(659, 0.02, 0.5, 0.13, bus.ui, 'sine', 0.15); tone(784, 0.02, 0.9, 0.13, bus.ui, 'sine', 0.3); } },
-  };
-  const wrap = f => (...a) => { if (ctx) f(...a); };
-
+  // Interface sounds: analog-horror hardware (VCR buttons, CRT power, tape spool, camcorder beeps).
+  // Each is a recording from assets/audio/ui/; missing ones are silent.
+  const ui = (key, opt = {}) => (...a) => { if (ctx) play('ui.' + key, { out: opt.out || bus.ui, vol: opt.vol ?? 0.7 }); };
   const api = {
     init, frame, newNight, spike, sight, tell, death, glitch, phantom, deadAir, officeOneShot, beat, breathe, gasp,
-    cam: wrap(ui.cam), monitor: wrap(ui.monitor), click: wrap(ui.click), accept: wrap(ui.accept), reject: wrap(ui.reject),
-    block: wrap(ui.block), jam: wrap(ui.jam), win: wrap(ui.win),
+    start: ui('start'), cam: ui('cam', { vol: 0.6 }), click: ui('click', { vol: 0.6 }),
+    monitor(up) { if (ctx) play(up ? 'ui.monitor_up' : 'ui.monitor_down', { out: bus.ui, vol: 0.7 }); },
+    submit(seconds) {                                          // camcorder REC beep, then a tape spool that lasts as long as the report takes
+      if (!ctx) return;
+      play('ui.rec_beep', { out: bus.ui, vol: 0.7 });
+      const b = buf['ui.processing'] && buf['ui.processing'][0];
+      play('ui.processing', { out: bus.ui, vol: 0.5, rate: b ? clamp(b.duration / seconds, 0.6, 1.8) : 1, delay: 0.25 });
+    },
+    accept: ui('accept'), reject: ui('reject'), cooldownDone: ui('ready', { vol: 0.4 }),
+    flash(on) { if (ctx) play(on ? 'ui.flash_on' : 'ui.flash_off', { out: bus.ui, vol: 0.7 }); },
+    win: ui('win', { vol: 0.8 }),
     setVolume(v) { S.volume = clamp(v, 0, 1); applyMix(); try { localStorage.setItem('as_vol', S.volume); } catch (e) {} },
+    setAmbience(v) { S.ambience = clamp(v, 0, 1); applyMix(); try { localStorage.setItem('as_amb', S.ambience); } catch (e) {} },
     setReduced(b) { S.reduced = !!b; applyMix(); try { localStorage.setItem('as_reduced', b ? '1' : '0'); } catch (e) {} },
-    get volume() { return S.volume; }, get reduced() { return S.reduced; },
+    get volume() { return S.volume; }, get ambience() { return S.ambience; }, get reduced() { return S.reduced; },
     status: () => status, ready: () => loadedPromise, onGlitch: null,
   };
+  // door/vent closing and jams are physical impacts, so they go through the impact bus (respects "reduce loud sounds")
+  api.block = () => { if (ctx) play('ui.block', { out: bus.impact, vol: 0.8 }); };
+  api.jam = () => { if (ctx) play('ui.jam', { out: bus.impact, vol: 0.8 }); };
   return api;
 })();

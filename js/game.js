@@ -66,7 +66,7 @@ const Game = (() => {
     if (!G.running) return;
     if (on && (G.monitor || G[kind])) return;               // not while on cameras or while that entry is shut
     if (G.flash[kind] === on) return;
-    G.flash[kind] = on; if (on) emit('click');
+    G.flash[kind] = on; emit('flash', on);
   }
   function toggleBlock(kind) { setBlock(kind, !G[kind]); }
 
@@ -105,7 +105,7 @@ const Game = (() => {
     const R = G.report;
     if (!G.running || !G.monitor || R.state !== 'idle') return;
     Object.assign(R, { state: 'proc', t: G.cfg.delay, dur: G.cfg.delay, room: G.cam, type, menuOpen: false });
-    emit('click');
+    emit('submit', G.cfg.delay);
   }
   function resolveReport() {
     const R = G.report;
@@ -186,7 +186,7 @@ const Game = (() => {
     // report state machine
     const R = G.report;
     if (R.state === 'proc') { R.t -= dt; if (R.t <= 0) resolveReport(); }
-    else if (R.state === 'cool') { R.t -= dt; if (R.t <= 0) R.state = 'idle'; }
+    else if (R.state === 'cool') { R.t -= dt; if (R.t <= 0) { R.state = 'idle'; emit('ready'); } }
 
     // entities
     let present = 0;

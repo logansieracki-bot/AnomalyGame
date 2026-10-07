@@ -16,7 +16,8 @@
   let s = section('Start');
   btn(s, 'START AUDIO', () => { Sfx.newNight(); files.textContent = 'loading...'; Sfx.ready().then(refresh); });
   btn(s, 'RESET (after a death)', () => Sfx.newNight());
-  s.insertAdjacentHTML('beforeend', ' Volume <input type="range" id="stVol" min="0" max="1" step="0.05"> <label><input type="checkbox" id="stRed"> Reduce loud sounds</label>');
+  s.insertAdjacentHTML('beforeend', ' Volume <input type="range" id="stVol" min="0" max="1" step="0.05"> Ambience <input type="range" id="stAmb" min="0" max="1" step="0.05"> <label><input type="checkbox" id="stRed"> Reduce loud sounds</label>');
+  s.querySelector('#stAmb').value = Sfx.ambience; s.querySelector('#stAmb').oninput = e => Sfx.setAmbience(+e.target.value);
   s.querySelector('#stVol').value = Sfx.volume; s.querySelector('#stVol').oninput = e => Sfx.setVolume(+e.target.value);
   s.querySelector('#stRed').checked = Sfx.reduced; s.querySelector('#stRed').onchange = e => Sfx.setReduced(e.target.checked);
 
@@ -50,9 +51,14 @@
   btn(s, 'Scratch (vent)', () => Sfx.tell('scratch', 'vent'));
   btn(s, 'Breath (door)', () => Sfx.tell('breath', 'door'));
 
-  s = section('Interface');
-  for (const k of ['cam', 'click', 'accept', 'reject', 'block', 'jam', 'win']) btn(s, k, () => Sfx[k]());
+  s = section('Interface (analog-horror hardware sounds)');
+  btn(s, 'start (tape in)', () => Sfx.start());
+  btn(s, 'camera switch', () => Sfx.cam()); btn(s, 'button click', () => Sfx.click());
   btn(s, 'monitor up', () => Sfx.monitor(true)); btn(s, 'monitor down', () => Sfx.monitor(false));
+  btn(s, 'report submit (3.5s)', () => Sfx.submit(3.5));
+  btn(s, 'accept', () => Sfx.accept()); btn(s, 'reject', () => Sfx.reject()); btn(s, 'cooldown done', () => Sfx.cooldownDone());
+  btn(s, 'flashlight on', () => Sfx.flash(true)); btn(s, 'flashlight off', () => Sfx.flash(false));
+  btn(s, 'door/vent close', () => Sfx.block()); btn(s, 'jam', () => Sfx.jam()); btn(s, 'win (6 AM)', () => Sfx.win());
 
   s = section('Death sequences (then press RESET)');
   for (const c of ['door', 'vent', 'overload', 'power']) btn(s, c, () => { const ms = Sfx.death(c); const n = document.getElementById('stDur'); if (n) n.textContent = `${c}: end screen after ${(ms / 1000).toFixed(1)}s`; });
@@ -62,8 +68,8 @@
   s.appendChild(files);
   function refresh() {
     const stt = Sfx.status(), keys = Object.keys(stt).sort();
-    if (!keys.length) { files.innerHTML = '<span class="miss">No manifest loaded: using synthesized stand-ins only. (Serve over http; file:// cannot load audio files.)</span>'; return; }
-    files.innerHTML = '<table>' + keys.map(k => `<tr><td>${k}</td><td class="${stt[k].loaded ? 'ok' : 'miss'}">${stt[k].loaded}/${stt[k].want}</td></tr>`).join('') + '</table>';
+    if (!keys.length) { files.innerHTML = '<span class="miss">No manifest loaded: everything is silent. (Serve over http; file:// cannot load audio files.)</span>'; return; }
+    files.innerHTML = '<table>' + keys.map(k => `<tr><td>${k}</td><td class="${stt[k].loaded ? 'ok' : 'miss'}">${stt[k].loaded}/${stt[k].want}${stt[k].loaded ? '' : ' (silent)'}</td></tr>`).join('') + '</table>';
   }
   files.textContent = 'Press START AUDIO to load the manifest.';
 

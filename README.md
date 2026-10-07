@@ -8,7 +8,7 @@ No build step. Open `index.html` in a browser (or `python3 -m http.server` and v
 Debug URL params: `?night=3` skips the menu, `?speed=5` runs the clock faster. `window.__game` is exposed in the console.
 
 ## Audio
-Real sound files go in `assets/audio/` (see `assets/audio/README.md` and `manifest.json`); missing files fall back to quiet stand-ins. Serve over http to load them. Audition everything at `?soundtest=1`.
+Real sound files go in `assets/audio/` (see `assets/audio/README.md` and `manifest.json`). Nothing is synthesized, so missing files are silent. Serve over http to load them. Audition everything at `?soundtest=1`.
 
 ## Controls
 - Click the map or press `1`-`9`: switch camera
