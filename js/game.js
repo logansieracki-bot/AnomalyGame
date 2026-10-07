@@ -11,6 +11,7 @@ const Game = (() => {
     door: false, vent: false,
     strain: { door: 0, vent: 0 }, jam: { door: 0, vent: 0 },
     flash: { door: false, vent: false }, entryFake: [],
+    fear: 0, holding: false,
     anomalies: [], halluc: [], entities: [],
     nextSpawn: 0,
     report: { state: 'idle', t: 0, dur: 0, room: null, type: null, menuOpen: false },
@@ -22,6 +23,8 @@ const Game = (() => {
   const progress = () => clamp(G.t / NIGHT_LENGTH, 0, 1);
   const hourIndex = () => Math.min(6, Math.floor(G.t / 60));
   const emit = (type, data) => G.events.push({ type, data });
+  // A scare: bumps the fear level that drives heartbeat, breathing and hearing (see audio.js).
+  const scare = a => { G.fear = clamp(G.fear + a, 0, 1); emit('spike', a); };
   const entPath = e => ENTITIES[e.id].path;
   const atEntryStage = e => e.stage >= entPath(e).length;
   const roomOf = e => (e.away > 0 || atEntryStage(e)) ? null : entPath(e)[e.stage];
@@ -35,12 +38,12 @@ const Game = (() => {
       running: true, over: null, night: n, cfg, t: 0, cam: 'living', monitor: true,
       power: 100, overload: 0, door: false, vent: false,
       strain: { door: 0, vent: 0 }, jam: { door: 0, vent: 0 },
-      flash: { door: false, vent: false }, entryFake: [],
+      flash: { door: false, vent: false }, entryFake: [], fear: 0, holding: false,
       anomalies: [], halluc: [], nextSpawn: rand([8, 12]), toast: null, staticT: 0.3,
       stats: { correct: 0, wrong: 0 }, events: [],
       report: { state: 'idle', t: 0, dur: 0, room: null, type: null, menuOpen: false },
     });
-    G.entities = cfg.ents.map(id => ({ id, stage: 0, moveT: 0, away: 0, entryT: 0, tellT: 0, leaveT: 0, seenEntry: false }));
+    G.entities = cfg.ents.map(id => ({ id, stage: 0, moveT: 0, away: 0, entryT: 0, tellT: 0, leaveT: 0, seenEntry: false, seenRoom: null }));
     for (const e of G.entities) e.moveT = hopTime(e) + 8;
   }
 
@@ -86,6 +89,7 @@ const Game = (() => {
   function spawnHallucination() {
     const room = Math.random() < 0.6 ? G.cam : Scene.pick(ROOMS).id;
     const kind = Math.random() < 0.3 ? 'face' : 'figure';
+    if (room === G.cam && G.monitor) scare(0.12);
     G.halluc.push({
       room, kind, x: 150 + Math.random() * 980, y: kind === 'face' ? 150 : 520 + Math.random() * 80,
       life: 2.5 + Math.random() * 2.5, max: 5, alpha: 0.12 + Math.random() * 0.2 + progress() * 0.1,
@@ -110,7 +114,7 @@ const Game = (() => {
     if (R.type.startsWith('ent:')) {
       const e = G.entities.find(en => en.id === R.type.slice(4) && roomOf(en) === R.room);
       if (e) {
-        ok = true; e.stage = 0; e.away = rand([10, 16]); e.moveT = hopTime(e);
+        ok = true; e.stage = 0; e.away = rand([10, 16]); e.moveT = hopTime(e); e.seenRoom = null;
         G.overload = clamp(G.overload - 5, 0, 100);
         toast(`${ENTITIES[e.id].name.toUpperCase()} DRIVEN BACK`, 'good');
       }
@@ -128,7 +132,7 @@ const Game = (() => {
   }
 
   // ---- end states ----
-  function lose(reason) { if (G.over) return; G.over = { win: false, reason }; G.running = false; emit('lose'); }
+  function lose(reason, cause) { if (G.over) return; G.over = { win: false, reason, cause }; G.running = false; emit('lose', cause); }
   function win() { if (G.over) return; G.over = { win: true, reason: '6 AM' }; G.running = false; emit('win'); }
 
   // ---- per-frame update ----
@@ -143,7 +147,7 @@ const Game = (() => {
     // power
     const drain = (G.monitor ? 0.28 : 0.06) + (G.door ? 0.15 : 0) + (G.vent ? 0.15 : 0) + (G.flash.door ? 0.3 : 0) + (G.flash.vent ? 0.3 : 0);
     G.power -= drain * dt;
-    if (G.power <= 0) { G.power = 0; return lose('POWER OUT'); }
+    if (G.power <= 0) { G.power = 0; return lose('POWER OUT', 'power'); }
 
     for (const k of ['door', 'vent']) if (G.monitor || G[k]) G.flash[k] = false;
 
@@ -153,7 +157,7 @@ const Game = (() => {
       if (G.jam[k] > 0) { G.jam[k] -= dt; if (G.jam[k] <= 0) G.strain[k] = 30; continue; }
       if (G[k]) {
         G.strain[k] += build * dt;
-        if (G.strain[k] >= 100) { G.strain[k] = 100; G[k] = false; G.jam[k] = STRAIN.jam; toast(`${k.toUpperCase()} JAMMED OPEN`, 'bad'); emit('jam'); }
+        if (G.strain[k] >= 100) { G.strain[k] = 100; G[k] = false; G.jam[k] = STRAIN.jam; toast(`${k.toUpperCase()} JAMMED OPEN`, 'bad'); emit('jam'); scare(0.3); }
       } else G.strain[k] = Math.max(0, G.strain[k] - STRAIN.recover * dt);
     }
 
@@ -170,10 +174,10 @@ const Game = (() => {
     }
     for (const f of G.entryFake) {
       f.life -= dt;
-      if (G.flash[f.kind] && !G[f.kind]) f.seen = true;             // sounds only start once you have seen it
+      if (G.flash[f.kind] && !G[f.kind] && !f.seen) { f.seen = true; scare(0.5); emit('sight'); }   // sounds only start once you have seen it
       if (!f.seen) continue;
       f.tellT -= dt;
-      if (f.tellT <= 0) { emit('tell', f.kind === 'vent' ? 'scratch' : (Math.random() < 0.5 ? 'knock' : 'breath')); f.tellT = 0.9; }
+      if (f.tellT <= 0) { emit('tell', { kind: f.kind === 'vent' ? 'scratch' : (Math.random() < 0.5 ? 'knock' : 'breath'), entry: f.kind }); f.tellT = 0.9; }
     }
     G.entryFake = G.entryFake.filter(f => f.life > 0);
     for (const h of G.halluc) h.life -= dt;
@@ -190,22 +194,24 @@ const Game = (() => {
       const def = ENTITIES[e.id], len = def.path.length;
       if (e.away > 0) { e.away -= dt; continue; }
       if (atEntryStage(e)) {
-        if (G.flash[def.entry] && !G[def.entry]) e.seenEntry = true;  // the flashlight is the only warning
+        if (G.flash[def.entry] && !G[def.entry] && !e.seenEntry) { e.seenEntry = true; scare(0.7); emit('sight'); }  // the flashlight is the only warning
         if (e.seenEntry) {
           e.tellT -= dt;
-          if (e.tellT <= 0) { emit('tell', def.tell); e.tellT = 0.9; }
+          if (e.tellT <= 0) { emit('tell', { kind: def.tell, entry: def.entry }); e.tellT = 0.9; }
         }
         if (entryBlocked(def.entry)) {
           e.leaveT += dt;
           if (e.leaveT >= 2.5) { e.stage = 0; e.away = rand([8, 12]); e.moveT = hopTime(e); e.leaveT = 0; e.entryT = 0; e.seenEntry = false; }
         } else {
           e.leaveT = 0; e.entryT += dt;
-          if (e.entryT >= cfg.kill) return lose(`${def.name.toUpperCase()} GOT IN`);
+          if (e.seenEntry) G.fear = Math.max(G.fear, 0.45 + 0.5 * Math.min(1, e.entryT / cfg.kill));
+          if (e.entryT >= cfg.kill) return lose(`${def.name.toUpperCase()} GOT IN`, def.entry);
         }
         continue;
       }
       present++;
       const watched = G.monitor && roomOf(e) === G.cam;
+      if (watched && e.seenRoom !== G.cam) { e.seenRoom = G.cam; scare(0.45); emit('sight'); }
       if (e.id === 'watcher' && watched) continue;               // the Watcher only moves when unobserved
       e.moveT -= dt * (1 + G.overload / 150) * (1 + 0.4 * progress());
       if (e.moveT <= 0) {
@@ -214,11 +220,17 @@ const Game = (() => {
       }
     }
 
+    // fear: slow-moving baseline from overload and low power, spikes decay over time
+    const base = clamp(G.overload / 100 * 0.7 + (G.power < 25 ? (25 - G.power) / 25 * 0.4 : 0), 0, 1);
+    G.fear = Math.max(base, G.fear - 0.1 * dt);
+    G.holding = ['door', 'vent'].some(k => G.flash[k] && (
+      G.entities.some(e => e.away <= 0 && atEntryStage(e) && ENTITIES[e.id].entry === k) || G.entryFake.some(f => f.kind === k)));
+
     // overload
     let rate = G.anomalies.length * 0.55 + present * 0.4 - 1.0;
     if (rate < 0) rate *= 0.5;
     G.overload = clamp(G.overload + rate * dt, 0, 100);
-    if (G.overload >= 100) return lose('ENTITY OVERLOAD');
+    if (G.overload >= 100) return lose('ENTITY OVERLOAD', 'overload');
   }
 
   return {

@@ -1,0 +1,48 @@
+{
+  "cam": {
+    "base":     ["cam/vhs_bed.ogg"],
+    "dropout":  ["cam/dropout1.ogg", "cam/dropout2.ogg"]
+  },
+  "rooms": {
+    "bedroom1":  ["rooms/bedroom1.ogg"],
+    "bathroom1": ["rooms/bathroom1.ogg"],
+    "garage":    ["rooms/garage.ogg"],
+    "bedroom2":  ["rooms/bedroom2.ogg"],
+    "bathroom2": ["rooms/bathroom2.ogg"],
+    "laundry":   ["rooms/laundry.ogg"],
+    "living":    ["rooms/living.ogg"],
+    "kitchen":   ["rooms/kitchen.ogg"],
+    "basement":  ["rooms/basement.ogg"]
+  },
+  "office": {
+    "base":    ["office/vents_bed.ogg"],
+    "oneshot": ["office/creak1.ogg", "office/creak2.ogg", "office/pipe1.ogg", "office/pipe2.ogg"]
+  },
+  "phantoms": [
+    "phantoms/footsteps_above.ogg", "phantoms/floorboard.ogg", "phantoms/latch.ogg", "phantoms/chair_drag.ogg",
+    "phantoms/pipe_knock.ogg", "phantoms/voices_wall.ogg", "phantoms/glass.ogg", "phantoms/distant_thud.ogg"
+  ],
+  "tell": {
+    "knock":   ["tells/knock1.ogg", "tells/knock2.ogg"],
+    "scratch": ["tells/scratch1.ogg", "tells/scratch2.ogg"],
+    "breath":  ["tells/breath_close1.ogg", "tells/breath_close2.ogg"]
+  },
+  "body": {
+    "heartbeat": ["body/heartbeat_single.ogg"],
+    "breath":    ["body/breath1.ogg", "body/breath2.ogg", "body/breath3.ogg"],
+    "gasp":      ["body/gasp1.ogg"],
+    "tinnitus":  ["body/tinnitus_loop.ogg"]
+  },
+  "impacts": {
+    "sight":          ["impacts/sight_drop.ogg"],
+    "door":           ["impacts/door_crack.ogg"],
+    "vent":           ["impacts/vent_wrench.ogg"],
+    "power_down":     ["impacts/power_down.ogg"],
+    "power_approach": ["impacts/approach_steps.ogg"]
+  },
+  "ui": {
+    "cam": ["ui/cam_switch.ogg"], "monitor": ["ui/monitor.ogg"], "click": ["ui/click.ogg"],
+    "accept": ["ui/accept.ogg"], "reject": ["ui/reject.ogg"], "block": ["ui/block.ogg"],
+    "jam": ["ui/jam.ogg"], "win": ["ui/win.ogg"]
+  }
+}

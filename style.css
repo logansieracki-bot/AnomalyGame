@@ -69,3 +69,14 @@ button.active { background: #b9d9b9; color: #0a140a; }
 #nightButtons button { font-size: 1.6cqw; padding: 1cqw 1.8cqw; }
 #screen .stats { font-size: 1.3cqw; line-height: 1.8; margin-bottom: 2cqw; }
 #screen.lose h1 { color: #e66; }
+
+.audioOpts { margin-top: 2cqw; font-size: 1.1cqw; opacity: .85; display: flex; gap: 1.5cqw; align-items: center; }
+.audioOpts input[type=range] { width: 10cqw; vertical-align: middle; }
+#soundtest { position: absolute; inset: 0; z-index: 5; background: #050805; overflow: auto; padding: 2cqw; font-size: 1.1cqw; }
+#soundtest h2 { margin: 0 0 1cqw; font-weight: normal; letter-spacing: .2cqw; }
+#soundtest section { margin-bottom: 1.2cqw; }
+#soundtest h3 { margin: 0 0 .4cqw; font-size: 1.1cqw; opacity: .7; font-weight: normal; }
+#soundtest button { margin: 0 .4cqw .4cqw 0; }
+#soundtest .row { display: flex; gap: 1cqw; align-items: center; margin-bottom: .6cqw; }
+#soundtest .ok { color: #9fe89f; } #soundtest .miss { color: #e88; }
+#soundtest table { border-collapse: collapse; } #soundtest td { padding: .1cqw 1cqw .1cqw 0; }

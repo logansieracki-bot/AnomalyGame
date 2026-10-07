@@ -67,14 +67,20 @@
     if (G.cfg.ents.length) { head('ENTITY PRESENCE'); G.cfg.ents.forEach(id => item(ENTITIES[id].name, 'ent:' + id)); }
   }
 
+  { const v = $('vol'), r = $('reduced');
+    if (v) { v.value = Sfx.volume; v.oninput = () => Sfx.setVolume(+v.value); }
+    if (r) { r.checked = Sfx.reduced; r.onchange = () => Sfx.setReduced(r.checked); } }
+
   const nb = $('nightButtons');
   NIGHTS.forEach(n => {
     const b = document.createElement('button'); b.textContent = `NIGHT ${n.n}`;
     b.onclick = () => begin(n.n); nb.appendChild(b);
   });
 
+  let deathAt = 0, deathCause = null;                         // power-out deaths black the screen out
+  Sfx.onGlitch = () => { G.staticT = Math.max(G.staticT, 0.12); };
   function begin(n) {
-    Sfx.init();
+    Sfx.init(); Sfx.newNight(); deathAt = 0; deathCause = null;
     Game.start(n); buildMenu();
     $('screen').classList.add('hidden'); $('hud').classList.remove('hidden');
     $('nightLabel').textContent = `NIGHT ${n}`;
@@ -128,17 +134,18 @@
   function handleEvents() {
     for (const ev of G.events.splice(0)) {
       switch (ev.type) {
-        case 'cam': Sfx.camSwitch(); break;
+        case 'cam': Sfx.cam(); break;
         case 'monitor': Sfx.monitor(ev.data); break;
         case 'click': Sfx.click(); break;
         case 'accept': Sfx.accept(); break;
         case 'reject': Sfx.reject(); break;
-        case 'block': Sfx.blockDoor(); break;
+        case 'block': Sfx.block(); break;
         case 'jam': Sfx.jam(); break;
-        case 'tell': Sfx[ev.data](); break;
-        case 'whisper': Sfx.whisper(); break;
+        case 'tell': Sfx.tell(ev.data.kind, ev.data.entry); break;
+        case 'spike': Sfx.spike(ev.data); break;
+        case 'sight': Sfx.sight(); break;
         case 'spawn': break;
-        case 'lose': Sfx.jump(); setTimeout(showEnd, 700); break;
+        case 'lose': deathAt = performance.now(); deathCause = ev.data; setTimeout(showEnd, Sfx.death(ev.data)); break;
         case 'win': Sfx.win(); setTimeout(showEnd, 400); break;
       }
     }
@@ -216,7 +223,9 @@
       post(overloadShake + (G.staticT > 0 ? 0.3 : 0), 'rgb(150,255,170)');
       ctx.fillStyle = `rgba(120,0,0,${overloadShake * overloadShake * 0.3})`; ctx.fillRect(0, 0, W, H);
     }
-    // alert dots on the map: none (the player has to look), except entities' rooms are never revealed.
+    if (deathCause === 'power' && deathAt) {
+      ctx.fillStyle = `rgba(0,0,0,${Math.min(1, Math.max(0, (performance.now() - deathAt - 150) / 500))})`; ctx.fillRect(0, 0, W, H);
+    }
   }
 
   let last = performance.now();
@@ -225,6 +234,7 @@
     // when speeding up for tests, run several small steps
     const steps = Math.max(1, Math.round(SPEED)); for (let i = 0; i < steps; i++) Game.update(dt / steps);
     handleEvents();
+    if (!window.__soundtest) Sfx.frame(dt, { monitor: G.monitor, cam: G.cam, fear: G.fear, overload: G.overload, night: G.night, progress: Game.progress(), running: G.running, holding: G.holding });
     if (G.cfg) { updateHud(); render(now); } else { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
     requestAnimationFrame(frame);
   }

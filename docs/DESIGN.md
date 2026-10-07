@@ -114,3 +114,13 @@ Inspired by FNAF 4: audio tells and fast reactions.
 - Whether the entity "distance" is visible to the player or hidden.
 - Window as a third entry point.
 - Final names and lore for the house and entities.
+
+## Audio
+See the audio plan in the repo history (`js/audio.js`, `assets/audio/README.md`). Summary:
+- **Free recordings only** (CC0 / royalty-free), mixed with Web Audio; synthesized stand-ins only until a real file exists. Credits live in `assets/audio/CREDITS.md`.
+- **Always-on ambience:** VHS/CCTV bed plus a per-room bed on the cameras; vent/duct air bed in the office. Random **dead air** (2-5 s of silence) and tape glitches.
+- **Phantoms:** far, muffled, reverbed domestic sounds (footsteps overhead, latch, chair drag, voices through a wall). Never knock, scratch or breathe, never tied to game state.
+- **Entity sounds** are close and dry and only play after you have seen the entity.
+- **Fear model** (`G.fear`): sightings, flashlight reveals, jams, overload, low power and entities waiting at the door raise it. It drives heartbeat tempo, breathing, tinnitus and tunnel-hearing (muffled ambience). Holding the flashlight on something holds your breath (silence), then a gasp.
+- **Deaths:** silence, then one dry physical event. Door: wood crack. Vent: metal wrench. Overload: every layer swells, hard cut. Power: thunk, spool-down, long quiet, something approaches.
+- **No** orchestral hits, screams, laughs or music boxes. Volume slider and "Reduce loud sounds" option on the menu. `?soundtest=1` auditions everything.
