@@ -35,17 +35,17 @@ button.active { background: #b9d9b9; color: #0a140a; }
 #reportMenu button:hover { background: rgba(140,180,140,.5); }
 #reportStatus { margin-top: .5cqw; min-height: 2cqw; font-size: 1.05cqw; }
 
-#mapWrap { position: absolute; right: 2cqw; bottom: 3cqw; width: 27cqw; }
-#mapTitle { text-align: right; font-size: 1.3cqw; letter-spacing: .1cqw; margin-bottom: .4cqw; }
-#map { position: relative; width: 100%; height: 22cqw; background: #070b07; border: .15cqw solid #7f9f7f; }
+#mapWrap { position: absolute; right: 1.5cqw; bottom: 2cqw; width: 18cqw; }
+#mapTitle { text-align: right; font-size: .85cqw; letter-spacing: .05cqw; margin-bottom: .3cqw; }
+#map { position: relative; width: 100%; height: 13.5cqw; background: #070b07; border: .12cqw solid #7f9f7f; }
 #map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-#map svg line { stroke: #6f8f6f; vector-effect: non-scaling-stroke; stroke-width: 2px; }
+#map svg line { stroke: #6f8f6f; vector-effect: non-scaling-stroke; stroke-width: 1.5px; }
 #map svg line.vent { stroke-dasharray: 5 4; }
-#map button { position: absolute; width: 24%; height: 16%; font-size: .9cqw; line-height: 1.1; padding: .1cqw; white-space: pre-line; }
-#map button i { position: absolute; left: .25cqw; top: .15cqw; font-style: normal; font-size: .75cqw; opacity: .75; }
-#map button b { position: absolute; right: .3cqw; top: .15cqw; font-size: .75cqw; font-weight: normal; opacity: .75; }
+#map button { position: absolute; width: 24%; height: 16%; font-size: .75cqw; line-height: 1.1; padding: 0; white-space: nowrap; border-width: .1cqw; }
+#map button i { position: absolute; left: .2cqw; top: .05cqw; font-style: normal; font-size: .6cqw; opacity: .7; }
+#map button b { position: absolute; right: .2cqw; top: .05cqw; font-size: .6cqw; font-weight: normal; opacity: .7; }
 #map .you { background: #111; color: #888; cursor: default; border-style: dashed; border-color: #6f8f6f; opacity: 1; }
-#map .tag { position: absolute; font-size: .8cqw; color: #9fbf9f; background: #070b07; padding: 0 .3cqw; letter-spacing: .05cqw; }
+#map .tag { position: absolute; font-size: .6cqw; color: #9fbf9f; background: #070b07; padding: 0 .3cqw; letter-spacing: .05cqw; }
 
 #monitorBtn { position: absolute; left: 50%; bottom: 2cqw; transform: translateX(-50%); font-size: 1.3cqw; padding: .7cqw 2cqw; }
 #defense { position: absolute; left: 50%; bottom: 7cqw; transform: translateX(-50%); display: flex; gap: 2cqw; }

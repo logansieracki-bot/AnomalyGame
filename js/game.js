@@ -25,6 +25,8 @@ const Game = (() => {
   const entPath = e => ENTITIES[e.id].path;
   const atEntryStage = e => e.stage >= entPath(e).length;
   const roomOf = e => (e.away > 0 || atEntryStage(e)) ? null : entPath(e)[e.stage];
+  // seconds until this entity takes its next step: longer hallways take longer
+  const hopTime = e => rand(G.cfg.move) * Math.max(0.5, Math.min(1.8, hopLength(e.id, e.stage) / AVG_HOP));
   const entryBlocked = kind => kind === 'door' ? G.door : G.vent;
 
   function start(n) {
@@ -38,7 +40,8 @@ const Game = (() => {
       stats: { correct: 0, wrong: 0 }, events: [],
       report: { state: 'idle', t: 0, dur: 0, room: null, type: null, menuOpen: false },
     });
-    G.entities = cfg.ents.map(id => ({ id, stage: 0, moveT: rand(cfg.move) + 8, away: 0, entryT: 0, tellT: 0, leaveT: 0, seenEntry: false }));
+    G.entities = cfg.ents.map(id => ({ id, stage: 0, moveT: 0, away: 0, entryT: 0, tellT: 0, leaveT: 0, seenEntry: false }));
+    for (const e of G.entities) e.moveT = hopTime(e) + 8;
   }
 
   function switchCam(id) {
@@ -107,7 +110,7 @@ const Game = (() => {
     if (R.type.startsWith('ent:')) {
       const e = G.entities.find(en => en.id === R.type.slice(4) && roomOf(en) === R.room);
       if (e) {
-        ok = true; e.stage = 0; e.away = rand([10, 16]); e.moveT = rand(G.cfg.move);
+        ok = true; e.stage = 0; e.away = rand([10, 16]); e.moveT = hopTime(e);
         G.overload = clamp(G.overload - 5, 0, 100);
         toast(`${ENTITIES[e.id].name.toUpperCase()} DRIVEN BACK`, 'good');
       }
@@ -194,7 +197,7 @@ const Game = (() => {
         }
         if (entryBlocked(def.entry)) {
           e.leaveT += dt;
-          if (e.leaveT >= 2.5) { e.stage = 0; e.away = rand([8, 12]); e.moveT = rand(cfg.move); e.leaveT = 0; e.entryT = 0; e.seenEntry = false; }
+          if (e.leaveT >= 2.5) { e.stage = 0; e.away = rand([8, 12]); e.moveT = hopTime(e); e.leaveT = 0; e.entryT = 0; e.seenEntry = false; }
         } else {
           e.leaveT = 0; e.entryT += dt;
           if (e.entryT >= cfg.kill) return lose(`${def.name.toUpperCase()} GOT IN`);
@@ -206,7 +209,7 @@ const Game = (() => {
       if (e.id === 'watcher' && watched) continue;               // the Watcher only moves when unobserved
       e.moveT -= dt * (1 + G.overload / 150) * (1 + 0.4 * progress());
       if (e.moveT <= 0) {
-        e.stage++; e.moveT = rand(cfg.move);
+        e.stage++; if (e.stage < len) e.moveT = hopTime(e);
         if (e.stage >= len) { e.entryT = 0; e.leaveT = 0; e.tellT = 0; e.seenEntry = false; }
       }
     }

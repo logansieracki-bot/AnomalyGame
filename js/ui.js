@@ -42,16 +42,16 @@
     const line = (a, b, cls) => { const l = document.createElementNS(NS, 'line'); const [x1, y1] = center(a), [x2, y2] = center(b);
       l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2); if (cls) l.setAttribute('class', cls); svg.appendChild(l); };
     for (const [a, b] of EDGES) line(ROOM[a].pos, ROOM[b].pos);
-    for (const r of ENTRY_LINKS.door) line(YOU_POS, ROOM[r].pos);
-    for (const r of ENTRY_LINKS.vent) line(YOU_POS, ROOM[r].pos, 'vent');
+    for (const r of Object.keys(ENTRY_LINKS.door)) line(YOU_POS, ROOM[r].pos);
+    for (const r of Object.keys(ENTRY_LINKS.vent)) line(YOU_POS, ROOM[r].pos, 'vent');
     mapEl.appendChild(svg);
     const tag = (t, x, y) => { const d = document.createElement('span'); d.className = 'tag'; d.textContent = t; d.style.left = x + '%'; d.style.top = y + '%'; mapEl.appendChild(d); };
     tag('DOOR', 22, 77); tag('VENT', 68, 77); }
   ROOMS.forEach((r, i) => {
     const b = document.createElement('button');
-    b.innerHTML = `<i>${i + 1}</i><b>${DIST[r.id]}</b>` + r.label.replace('\n', '<br>');
+    b.innerHTML = `<i>${i + 1}</i><b>${DIST[r.id]}</b>` + r.label;
     b.style.left = r.pos[0] + '%'; b.style.top = r.pos[1] + '%';
-    b.title = `${r.name} [${i + 1}] - ${DIST[r.id]} step(s) from you`;
+    b.title = `${r.name} [${i + 1}] - ${DIST[r.id]} steps from you`;
     b.onclick = () => Game.switchCam(r.id);
     mapEl.appendChild(b); mapBtns[r.id] = b;
   });
@@ -148,7 +148,7 @@
   function updateHud() {
     const room = ROOM[G.cam];
     $('camLabel').textContent = G.monitor ? `CAM ${ROOMS.indexOf(room) + 1} - ${room.name.toUpperCase()}` : 'OFFICE';
-    $('mapTitle').textContent = `${room.name.toUpperCase()}  |  ${DIST[room.id]} STEP${DIST[room.id] > 1 ? 'S' : ''} FROM YOU`;
+    $('mapTitle').textContent = `${room.name.toUpperCase()} | ${DIST[room.id]} STEPS FROM YOU`;
     $('clock').textContent = HOURS[Game.hourIndex()];
     $('powerFill').style.width = G.power + '%';
     $('powerFill').style.background = G.power < 25 ? '#d96' : '#8fcf8f';

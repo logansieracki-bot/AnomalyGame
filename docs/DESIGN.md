@@ -19,7 +19,7 @@ Watch cameras -> spot something wrong -> report (delay) -> cooldown
 ```
 
 ## Camera UI
-- FNAF-style **floor-plan map**: rooms joined by hallway lines, your office ("YOU") at the bottom, the door and vent shown as the two links into it. Each room shows its camera number and **how many steps it is from you**; the header names the current room and its distance. Entity paths follow these hallways.
+- FNAF-style **floor-plan map**: rooms joined by hallway lines, your office ("YOU") at the bottom, the door and vent shown as the two links into it. Each room shows its camera number and **how many walking steps it is from you** (6 to 33 depending on the room); the header names the current room and its distance. Hallways have real lengths, entity paths follow them, and **longer hallways take entities longer to cross**. The map is kept small so it doesn't cover the feed.
 - Select a room camera from the map. Only one camera is viewed at a time.
 - Viewing cameras drains monitor power; lowering the monitor saves power but blinds you.
 - Later nights: the map glitches, mislabels rooms, or drops cameras.
